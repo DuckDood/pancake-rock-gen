@@ -91,6 +91,7 @@ float get_blurred_thresholded_at_coord(v2 p, v2 res, int radius1, float threshol
 int main() {
 	const int resolution = 100;
 	FILE *f = fopen("rand.ppm", "w");
+	FILE *obj = fopen("layer.obj", "w");
 	fprintf(f, "P6 %i %i 255\n", resolution, resolution);
 	v2 res = {resolution,resolution};
 	v2 halfres = {resolution / 2., resolution / 2.};
@@ -107,6 +108,7 @@ int main() {
 	}*/
 	const int radius_resolution = 100;
 	const int ray_resolution=200;
+	v2 *positions = malloc(ray_resolution * sizeof(v2));
 	const float step_size = 1/2.;
 #pragma omp parallel for
 	for(int i = 0; i < radius_resolution; ++i) {
@@ -114,18 +116,29 @@ int main() {
 		v2 pos = (v2){0};
 		for(int step = 0; step < ray_resolution; ++step) {
 			pos = v2_add(pos, (v2){cos(angle) * step_size, sin(angle) * step_size});
-			if(get_blurred_thresholded_at_coord(v2_add(pos,halfres), res, 6, 0.4, 4, 0.4) > 0.5) {
+			if(get_thresholded_at_coord(v2_add(pos,halfres), res, 6, 0.4) > 0.5) {
 				break;
 			}
 		} 
 		//int x = pos.x * res.x,y = pos.y * res.y;
 		values[(int)(pos.y + res.y/2) * (int)res.x + (int)(pos.x + res.x/2)] = 1;
+		positions[i] = v2_div(pos, res);
 	}
 	for(int i = 0; i < resolution*resolution; ++i) {
 		fprintf(f, "%c", (int)values[i] * 255);
 		fprintf(f, "%c", (int)values[i] * 255);
 		fprintf(f, "%c", (int)values[i] * 255);
 	}
+	for(int i = 0; i < radius_resolution; ++i) {
+		fprintf(obj, "v %f %f %f\n", positions[i].x, positions[i].y, 0.);
+	}
+	fprintf(obj, "v %f %f %f\n", 0., 0., 0.);
+	for(int i = 1; i <= radius_resolution; ++i) {
+		fprintf(obj, "f %i %i %i\n", radius_resolution+1, i, (i) % (radius_resolution) + 1);
+	}
+
 	free(values);
+	free(positions);
 	fclose(f);
+	fclose(obj);
 }
