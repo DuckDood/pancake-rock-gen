@@ -131,10 +131,16 @@ int main() {
 	}
 	for(int i = 0; i < radius_resolution; ++i) {
 		fprintf(obj, "v %f %f %f\n", positions[i].x, positions[i].y, 0.);
+		fprintf(obj, "v %f %f %f\n", positions[i].x, positions[i].y, 1.);
 	}
 	fprintf(obj, "v %f %f %f\n", 0., 0., 0.);
+	fprintf(obj, "v %f %f %f\n", 0., 0., 1.);
+
 	for(int i = 1; i <= radius_resolution; ++i) {
-		fprintf(obj, "f %i %i %i\n", radius_resolution+1, i, (i) % (radius_resolution) + 1);
+		fprintf(obj, "f %i %i %i\n", radius_resolution*2+1, 2*(i)-1, 2*((i) % (radius_resolution) + 1)-1);
+		fprintf(obj, "f %i %i %i\n", radius_resolution*2+2, 2*(i), 2*((i) % (radius_resolution) + 1));
+
+		fprintf(obj, "f %i %i %i %i\n", 2*(i)-1, 2*((i) % (radius_resolution) + 1)-1, 2*((i) % (radius_resolution) + 1), 2*i);
 	}
 
 	free(values);
