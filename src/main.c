@@ -108,7 +108,7 @@ int main() {
 	}*/
 	const int radius_resolution = 100;
 	const int ray_resolution=200;
-	v2 *positions = malloc(ray_resolution * sizeof(v2));
+	v2 *positions = malloc(radius_resolution * sizeof(v2));
 	const float step_size = 1/2.;
 #pragma omp parallel for
 	for(int i = 0; i < radius_resolution; ++i) {
