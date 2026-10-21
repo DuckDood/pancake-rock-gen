@@ -40,12 +40,6 @@ float noise2( v2 p )
 	return hash( p.x + p.y * 57.1235);
 }
 
-float get_biased_at_coord(v2 p) {
-	float noise_amount =  noise2((p));
-	float noise_scale = v2_len(v2_sub(p, (v2){0.5, 0.5}));
-
-	return noise_amount * noise_scale;
-}
 
 float get_blurred_at_coord(v2 p, v2 res, int radius) {
 	float blurred_count = 0;
@@ -57,11 +51,13 @@ float get_blurred_at_coord(v2 p, v2 res, int radius) {
 			v2 uv = v2_div(v2_add(p, offset), res);
 			if(uv.x < 0 || uv.y < 0 || uv.x > 1 || uv.y > 1) continue;
 			++blurred_count;
-			blur_value += get_biased_at_coord(uv);
+			blur_value += noise2(uv);
 		}
 	}
 
-	return pow(blur_value / blurred_count, 0.5);
+	float noise_scalar = pow(v2_len(v2_sub(v2_div(p, res), (v2){0.5, 0.5})), 0.2);
+
+	return (blur_value / blurred_count) * noise_scalar;
 }
 
 float get_thresholded_at_coord(v2 p, v2 res, int radius, float threshold) {
@@ -96,7 +92,7 @@ int main() {
 	v2 res = {resolution,resolution};
 	v2 halfres = {resolution / 2., resolution / 2.};
 	_Bool *values = calloc(resolution*resolution,sizeof(_Bool));
-/*
+
 #pragma omp parallel for
 	for(int i = 0; i < resolution * resolution; ++i) {
 		float width = i % resolution;
@@ -104,8 +100,8 @@ int main() {
 
 		v2 p = {width, height};
 
-		values[i] = get_blurred_thresholded_at_coord(p, res, 7, 0.3, 3, 0.4) * 255;
-	}*/
+		values[i] = get_thresholded_at_coord(p, res, 6, 0.35) * 255;
+	}
 	const int radius_resolution = 100;
 	const int ray_resolution=200;
 	v2 *positions = malloc(radius_resolution * sizeof(v2));
@@ -121,7 +117,7 @@ int main() {
 			}
 		} 
 		//int x = pos.x * res.x,y = pos.y * res.y;
-		values[(int)(pos.y + res.y/2) * (int)res.x + (int)(pos.x + res.x/2)] = 1;
+		//values[(int)(pos.y + res.y/2) * (int)res.x + (int)(pos.x + res.x/2)] = 1;
 		positions[i] = v2_div(pos, res);
 	}
 	for(int i = 0; i < resolution*resolution; ++i) {

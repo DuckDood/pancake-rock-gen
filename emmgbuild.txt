@@ -1,10 +1,15 @@
 dir obj
 dir build
 
+
 compiler gcc
+
 srcflag -fopenmp
 buildflag -fopenmp
-# Put src here
+
+srcflag -fsanitize=address -g3
+buildflag -fsanitize=address -g3
+
 src main.c
 
 # Put build here
