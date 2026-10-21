@@ -72,15 +72,15 @@ float get_blurred_thresholded_at_coord(v2 p, v2 res, int radius1, float threshol
 		for(int y = -radius2; y <= radius2; ++y) {
 			v2 offset = {x, y};
 			//v2 uv = v2_add(v2_div(p, res), v2_div(offset, res));
-			v2 uv = v2_div(v2_add(p, offset), res);
-			if(uv.x < 0 || uv.y < 0 || uv.x > 1 || uv.y > 1) continue;
+			v2 uv = v2_add(p, v2_div(offset, res));
+			if(uv.x < 0 || uv.y < 0 || uv.x > res.x || uv.y > res.y) continue;
 			++blurred_count;
 			//blur_value += get_biased_at_coord(uv);
-			blur_value += get_thresholded_at_coord(p, res, radius1, threshold1);
+			blur_value += get_thresholded_at_coord(uv, res, radius1, threshold1);
 
 		}
 	}
-	return blur_value > threshold2;
+	return (blur_value/blurred_count) > threshold2;
 }
 
 
@@ -100,7 +100,7 @@ int main() {
 
 		v2 p = {width, height};
 
-		values[i] = get_thresholded_at_coord(p, res, 6, 0.35) * 255;
+		values[i] = get_blurred_thresholded_at_coord(p, res, 6, 0.35, 2, 0.5) * 255;
 	}
 	const int radius_resolution = 100;
 	const int ray_resolution=200;
