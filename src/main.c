@@ -61,14 +61,16 @@ float noise3( v3 p )
 float get_blurred_at_coord(v3 p, v3 res, int radius) {
 	float blurred_count = 0;
 	float blur_value = 0;
-	for(int x = -radius; x <= radius; ++x) {
-		for(int y = -radius; y <= radius; ++y) {
-			v3 offset = {x, y, 0};
-			//v2 uv = v2_add(v2_div(p, res), v2_div(offset, res));
-			v3 uv = v3_div(v3_add(p, offset), res);
-			//if(uv.x < 0 || uv.y < 0 || uv.x > 1 || uv.y > 1) continue;
-			++blurred_count;
-			blur_value += noise3(uv);
+	for(int z = -radius; z <= radius; ++z) {
+		for(int x = -radius; x <= radius; ++x) {
+			for(int y = -radius; y <= radius; ++y) {
+				v3 offset = {x, y, 0};
+				//v2 uv = v2_add(v2_div(p, res), v2_div(offset, res));
+				v3 uv = v3_div(v3_add(p, offset), res);
+				//if(uv.x < 0 || uv.y < 0 || uv.x > 1 || uv.y > 1) continue;
+				++blurred_count;
+				blur_value += noise3(uv);
+			}
 		}
 	}
 
@@ -87,16 +89,18 @@ float get_thresholded_at_coord(v3 p, v3 res, int radius, float threshold) {
 float get_blurred_thresholded_at_coord(v3 p, v3 res, int radius1, float threshold1, int radius2, float threshold2) {
 	float blurred_count = 0;
 	float blur_value = 0;
-	for(int x = -radius2; x <= radius2; ++x) {
-		for(int y = -radius2; y <= radius2; ++y) {
-			v3 offset = {x, y, 0};
-			//v2 uv = v2_add(v2_div(p, res), v2_div(offset, res));
-			v3 uv = v3_add(p, v3_div(offset, res));
-			//if(uv.x < 0 || uv.y < 0 || uv.x > res.x || uv.y > res.y) continue;
-			++blurred_count;
-			//blur_value += get_biased_at_coord(uv);
-			blur_value += get_thresholded_at_coord(uv, res, radius1, threshold1);
+	for(int z = -radius2; z <= radius2; ++z) {
+		for(int x = -radius2; x <= radius2; ++x) {
+			for(int y = -radius2; y <= radius2; ++y) {
+				v3 offset = {x, y, z};
+				//v2 uv = v2_add(v2_div(p, res), v2_div(offset, res));
+				v3 uv = v3_add(p, v3_div(offset, res));
+				//if(uv.x < 0 || uv.y < 0 || uv.x > res.x || uv.y > res.y) continue;
+				++blurred_count;
+				//blur_value += get_biased_at_coord(uv);
+				blur_value += get_thresholded_at_coord(uv, res, radius1, threshold1);
 
+			}
 		}
 	}
 	return (blur_value/blurred_count) > threshold2;
@@ -124,11 +128,11 @@ int main() {
 	}*/
 
 
-	const int radius_resolution = 100;
-	const int ray_resolution=200;
+	const int radius_resolution = 50;
+	const int ray_resolution=100;
 	int layer_count = 10;
 	v3 *positions = malloc(radius_resolution * layer_count * sizeof(v3));
-	const float step_size = 1/2.;
+	const float step_size = 1.;
 	for(int z = 0; z < layer_count; ++z) {
 #pragma omp parallel for
 	for(int i = 0; i < radius_resolution; ++i) {
@@ -136,7 +140,7 @@ int main() {
 		v3 pos = (v3){0, 0, z};
 		for(int step = 0; step < ray_resolution; ++step) {
 			pos = v3_add(pos, (v3){cos(angle) * step_size, sin(angle) * step_size, 0});
-			if(get_blurred_thresholded_at_coord(pos, res, 3, 0.35, 1, 0.35) > 0.5) {
+			if(get_blurred_thresholded_at_coord(pos, res, 2, 0.35, 1, 0.35) > 0.5) {
 				break;
 			}
 		} 
@@ -155,22 +159,33 @@ int main() {
 
 	for(int z = 0; z < layer_count; ++z) {
 		fprintf(obj, "v %f %f %f\n", 0., 0., (float)z);
+		v2 scale = (v2){(1-pow(hash(z * layer_count * 32), 4) + 1)/2, (1-pow(hash(z * layer_count * 2409), 4) + 1)/2};
+
 		for(int i = 0; i < radius_resolution; ++i) {
-			fprintf(obj, "v %f %f %f\n", positions[i + radius_resolution * z].x, positions[i + radius_resolution * z].y, (float)z);
+			v3 pos = positions[i + radius_resolution * z];
+			fprintf(obj, "v %f %f %f\n", pos.x * scale.x, pos.y * scale.y, (float)z);
+			//fprintf(obj, "v %f %f %f\n", positions[i].x, positions[i].y, 1.);
+		}
+
+		fprintf(obj, "v %f %f %f\n", 0., 0., (float)z+1);
+		for(int i = 0; i < radius_resolution; ++i) {
+			v3 pos = positions[i + radius_resolution * z];
+			fprintf(obj, "v %f %f %f\n", pos.x * scale.x, pos.y * scale.y, (float)z+1);
 			//fprintf(obj, "v %f %f %f\n", positions[i].x, positions[i].y, 1.);
 		}
 	}
 	//fprintf(obj, "v %f %f %f\n", 0., 0., 1.);
 
-	for(int z = 0; z <= layer_count; ++z) {
+	for(int z = 0; z < layer_count; ++z) {
 		for(int i = 1; i <= radius_resolution; ++i) {
-			int layer = z * (radius_resolution+1);
-			int n_layer = (z+1) * (radius_resolution+1);
+			int layer = z * (radius_resolution+1) * 2;
+			int n_layer = layer + radius_resolution + 1;
 
 			int vert1 = i + 1;
 			int vert2 = i % radius_resolution + 2;
 			//int layer = 0;
 			fprintf(obj, "f %i %i %i\n", 1 + layer, vert1 + layer, vert2 + layer);
+			fprintf(obj, "f %i %i %i\n", 1 + n_layer, vert1 + n_layer, vert2 + n_layer);
 			fprintf(obj, "f %i %i %i %i \n", vert1 + layer, vert2 + layer, vert2 + n_layer, vert1 + n_layer); 
 		}
 	}
