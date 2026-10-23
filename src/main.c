@@ -209,25 +209,42 @@ int main() {
 			int vert1 = i + 1;
 			int vert2 = i % radius_resolution + 2;
 			//int layer = 0;
-			v3 base = positions_obj[layer];
-			v3 stick = positions_obj[vert1 + layer - 1];
-			v3 new = v3_fdiv(v3_add(base, stick), 2);
-			fprintf(obj, "v %f %f %f\n", new.x, new.y, new.z);
+			
+
+
+			// top cap
+			v3 top_base = positions_obj[layer];
+			v3 top_stick = positions_obj[vert1 + layer - 1];
+			v3 top_new = v3_fdiv(v3_add(top_base, top_stick), 2);
+			fprintf(obj, "v %f %f %f\n", top_new.x, top_new.y, top_new.z);
 			vert_id++;
 
-			v3 stick2 = positions_obj[vert2 + layer - 1];
-			v3 new2 = v3_fdiv(v3_add(base, stick2), 2);
-			fprintf(obj, "v %f %f %f\n", new2.x, new2.y, new2.z);
+			v3 top_stick2 = positions_obj[vert2 + layer - 1];
+			v3 top_new2 = v3_fdiv(v3_add(top_base, top_stick2), 2);
+			fprintf(obj, "v %f %f %f\n", top_new2.x, top_new2.y, top_new2.z);
 			vert_id++;
 
-			// caps
 			fprintf(obj, "f %i %i %i\n", vert_id, vert_id-1, 1 + layer);
 
 			fprintf(obj, "f %i %i %i\n", vert_id-1, vert_id, vert1+layer);
 			fprintf(obj, "f %i %i %i\n", vert_id, vert2+layer, vert1+layer);
 
+			// bottom cap
+			v3 bottom_base = positions_obj[n_layer];
+			v3 bottom_stick = positions_obj[vert1 + n_layer - 1];
+			v3 bottom_new = v3_fdiv(v3_add(bottom_base, bottom_stick), 2);
+			fprintf(obj, "v %f %f %f\n", bottom_new.x, bottom_new.y, bottom_new.z);
+			vert_id++;
 
-			fprintf(obj, "f %i %i %i\n", 1 + n_layer, vert1 + n_layer, vert2 + n_layer);
+			v3 bottom_stick2 = positions_obj[vert2 + n_layer - 1];
+			v3 bottom_new2 = v3_fdiv(v3_add(bottom_base, bottom_stick2), 2);
+			fprintf(obj, "v %f %f %f\n", bottom_new2.x, bottom_new2.y, bottom_new2.z);
+			vert_id++;
+
+			fprintf(obj, "f %i %i %i\n", vert_id, vert_id-1, 1 + n_layer);
+
+			fprintf(obj, "f %i %i %i\n", vert_id-1, vert_id, vert1+n_layer);
+			fprintf(obj, "f %i %i %i\n", vert_id, vert2+n_layer, vert1+n_layer);
 
 			// walls
 			fprintf(obj, "f %i %i %i \n", vert1 + layer, vert2 + layer, vert2 + n_layer); 
