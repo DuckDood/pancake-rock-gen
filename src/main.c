@@ -241,10 +241,10 @@ int main() {
 			fprintf(obj, "v %f %f %f\n", bottom_new2.x, bottom_new2.y, bottom_new2.z);
 			vert_id++;
 
-			fprintf(obj, "f %i %i %i\n", vert_id, vert_id-1, 1 + n_layer);
+			fprintf(obj, "f %i %i %i\n", 1 + n_layer, vert_id-1, vert_id);
 
-			fprintf(obj, "f %i %i %i\n", vert_id-1, vert_id, vert1+n_layer);
-			fprintf(obj, "f %i %i %i\n", vert_id, vert2+n_layer, vert1+n_layer);
+			fprintf(obj, "f %i %i %i\n", vert1+n_layer, vert_id, vert_id-1);
+			fprintf(obj, "f %i %i %i\n", vert1+n_layer, vert2+n_layer, vert_id);
 
 			// walls
 			fprintf(obj, "f %i %i %i \n", vert1 + layer, vert2 + layer, vert2 + n_layer); 
