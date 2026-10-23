@@ -165,8 +165,8 @@ int main() {
 
 	for(int z = 0; z < layer_count; ++z) {
 		fprintf(obj, "v %f %f %f\n", 0., 0., (float)z * layer_step);
-		float scale_min = 2;
-		float scale_drop = 3; 
+		float scale_min = 1;
+		float scale_drop = 2; 
 		v2 scale = (v2){(1-pow(hash(z * layer_count * 32), scale_drop) + scale_min)/(scale_min+1), (1-pow(hash(z * layer_count * 2409), scale_drop) + scale_min)/(scale_min+1)};
 		//v2 scale = (v2){1, 1};
 
@@ -195,7 +195,8 @@ int main() {
 			//int layer = 0;
 			fprintf(obj, "f %i %i %i\n", 1 + layer, vert1 + layer, vert2 + layer);
 			fprintf(obj, "f %i %i %i\n", 1 + n_layer, vert1 + n_layer, vert2 + n_layer);
-			fprintf(obj, "f %i %i %i %i \n", vert1 + layer, vert2 + layer, vert2 + n_layer, vert1 + n_layer); 
+			fprintf(obj, "f %i %i %i \n", vert1 + layer, vert2 + layer, vert2 + n_layer); 
+			fprintf(obj, "f %i %i %i \n", vert1 + layer, vert2 + n_layer, vert1 + n_layer); 
 		}
 	}
 
