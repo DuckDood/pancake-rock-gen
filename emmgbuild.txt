@@ -4,6 +4,8 @@ dir build
 
 compiler gcc
 
+srcflag -O3
+
 srcflag -fopenmp
 buildflag -fopenmp
 

@@ -65,8 +65,10 @@ float get_blurred_at_coord(v3 p, v3 res, int radius) {
 		for(int x = -radius; x <= radius; ++x) {
 			for(int y = -radius; y <= radius; ++y) {
 				v3 offset = {x, y, 0};
+				v3 p_floor = {floor(p.x), floor(p.y), floor(p.z)};
+				//v3 p_floor = p;
 				//v2 uv = v2_add(v2_div(p, res), v2_div(offset, res));
-				v3 uv = v3_div(v3_add(p, offset), res);
+				v3 uv = v3_div(v3_add(p_floor, offset), res);
 				//if(uv.x < 0 || uv.y < 0 || uv.x > 1 || uv.y > 1) continue;
 				++blurred_count;
 				blur_value += noise3(uv);
@@ -76,7 +78,7 @@ float get_blurred_at_coord(v3 p, v3 res, int radius) {
 
 	v3 p_2d = p;
 	p_2d.z = 0;
-	float noise_scalar = pow(v3_len(v3_div(p, res)), 0.2);
+	float noise_scalar = pow(v3_len(v3_div(p_2d, res)), 0.2);
 
 	return (blur_value / blurred_count) * noise_scalar;
 }
@@ -93,8 +95,11 @@ float get_blurred_thresholded_at_coord(v3 p, v3 res, int radius1, float threshol
 		for(int x = -radius2; x <= radius2; ++x) {
 			for(int y = -radius2; y <= radius2; ++y) {
 				v3 offset = {x, y, z};
+				//v3 p_floor = {floor(p.x), floor(p.y), floor(p.z)};
 				//v2 uv = v2_add(v2_div(p, res), v2_div(offset, res));
-				v3 uv = v3_add(p, v3_div(offset, res));
+				//v3 uv = v3_add(p, v3_div(offset, res));
+				v3 uv = v3_add(p, offset);
+				//v3 uv = v3_div(v3_add(p_floor, offset), res);
 				//if(uv.x < 0 || uv.y < 0 || uv.x > res.x || uv.y > res.y) continue;
 				++blurred_count;
 				//blur_value += get_biased_at_coord(uv);
@@ -129,18 +134,19 @@ int main() {
 
 
 	const int radius_resolution = 50;
-	const int ray_resolution=100;
-	int layer_count = 10;
+	const int ray_resolution=75;
+	int layer_count = 30;
+	float layer_step = 1;
 	v3 *positions = malloc(radius_resolution * layer_count * sizeof(v3));
 	const float step_size = 1.;
 	for(int z = 0; z < layer_count; ++z) {
 #pragma omp parallel for
 	for(int i = 0; i < radius_resolution; ++i) {
 		float angle = ((float)i / radius_resolution) * 2 * M_PI;
-		v3 pos = (v3){0, 0, z};
+		v3 pos = (v3){0, 0, z * layer_step};
 		for(int step = 0; step < ray_resolution; ++step) {
 			pos = v3_add(pos, (v3){cos(angle) * step_size, sin(angle) * step_size, 0});
-			if(get_blurred_thresholded_at_coord(pos, res, 2, 0.35, 1, 0.35) > 0.5) {
+			if(get_blurred_thresholded_at_coord(pos, res, 3, 0.35, 2, 0.35) > 0.5) {
 				break;
 			}
 		} 
@@ -158,19 +164,22 @@ int main() {
 	}
 
 	for(int z = 0; z < layer_count; ++z) {
-		fprintf(obj, "v %f %f %f\n", 0., 0., (float)z);
-		v2 scale = (v2){(1-pow(hash(z * layer_count * 32), 4) + 1)/2, (1-pow(hash(z * layer_count * 2409), 4) + 1)/2};
+		fprintf(obj, "v %f %f %f\n", 0., 0., (float)z * layer_step);
+		float scale_min = 2;
+		float scale_drop = 3; 
+		v2 scale = (v2){(1-pow(hash(z * layer_count * 32), scale_drop) + scale_min)/(scale_min+1), (1-pow(hash(z * layer_count * 2409), scale_drop) + scale_min)/(scale_min+1)};
+		//v2 scale = (v2){1, 1};
 
 		for(int i = 0; i < radius_resolution; ++i) {
 			v3 pos = positions[i + radius_resolution * z];
-			fprintf(obj, "v %f %f %f\n", pos.x * scale.x, pos.y * scale.y, (float)z);
+			fprintf(obj, "v %f %f %f\n", pos.x * scale.x, pos.y * scale.y, (float)z*layer_step);
 			//fprintf(obj, "v %f %f %f\n", positions[i].x, positions[i].y, 1.);
 		}
 
-		fprintf(obj, "v %f %f %f\n", 0., 0., (float)z+1);
+		fprintf(obj, "v %f %f %f\n", 0., 0., (float)(z+1)*layer_step);
 		for(int i = 0; i < radius_resolution; ++i) {
 			v3 pos = positions[i + radius_resolution * z];
-			fprintf(obj, "v %f %f %f\n", pos.x * scale.x, pos.y * scale.y, (float)z+1);
+			fprintf(obj, "v %f %f %f\n", pos.x * scale.x, pos.y * scale.y, (float)(z+1)*layer_step);
 			//fprintf(obj, "v %f %f %f\n", positions[i].x, positions[i].y, 1.);
 		}
 	}
