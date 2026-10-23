@@ -27,6 +27,11 @@ float v2_len(v2 a){
 v3 v3_div(v3 a, v3 b){
 	return (v3){a.x / b.x, a.y / b.y, a.z / b.z}; 
 }
+
+v3 v3_fdiv(v3 a, float b){
+	return (v3){a.x / b, a.y / b, a.z / b}; 
+}
+
 v3 v3_add(v3 a, v3 b){
 	return (v3){a.x + b.x, a.y + b.y, a.z + b.z}; 
 }
@@ -138,6 +143,7 @@ int main() {
 	int layer_count = 30;
 	float layer_step = 1;
 	v3 *positions = malloc(radius_resolution * layer_count * sizeof(v3));
+	v3 *positions_obj = malloc((radius_resolution * layer_count * 3) * sizeof(v3));
 	const float step_size = 1.;
 	for(int z = 0; z < layer_count; ++z) {
 #pragma omp parallel for
@@ -162,9 +168,13 @@ int main() {
 		fprintf(f, "%c", (int)values[i] * 255);
 		fprintf(f, "%c", (int)values[i] * 255);
 	}
+	int vert_id = 0;
 
 	for(int z = 0; z < layer_count; ++z) {
 		fprintf(obj, "v %f %f %f\n", 0., 0., (float)z * layer_step);
+		positions_obj[vert_id] = (v3){0., 0., (float)z * layer_step};
+
+		vert_id++;
 		float scale_min = 1;
 		float scale_drop = 2; 
 		v2 scale = (v2){(1-pow(hash(z * layer_count * 32), scale_drop) + scale_min)/(scale_min+1), (1-pow(hash(z * layer_count * 2409), scale_drop) + scale_min)/(scale_min+1)};
@@ -173,13 +183,19 @@ int main() {
 		for(int i = 0; i < radius_resolution; ++i) {
 			v3 pos = positions[i + radius_resolution * z];
 			fprintf(obj, "v %f %f %f\n", pos.x * scale.x, pos.y * scale.y, (float)z*layer_step);
+			positions_obj[vert_id] = (v3){pos.x * scale.x, pos.y * scale.y, (float)z * layer_step};
+			vert_id++;
 			//fprintf(obj, "v %f %f %f\n", positions[i].x, positions[i].y, 1.);
 		}
 
 		fprintf(obj, "v %f %f %f\n", 0., 0., (float)(z+1)*layer_step);
+		positions_obj[vert_id] = (v3){0., 0., (float)(z+1) * layer_step};
+		vert_id++;
 		for(int i = 0; i < radius_resolution; ++i) {
 			v3 pos = positions[i + radius_resolution * z];
 			fprintf(obj, "v %f %f %f\n", pos.x * scale.x, pos.y * scale.y, (float)(z+1)*layer_step);
+			positions_obj[vert_id] = (v3){pos.x * scale.x, pos.y * scale.y, (float)(z+1) * layer_step};
+			vert_id++;
 			//fprintf(obj, "v %f %f %f\n", positions[i].x, positions[i].y, 1.);
 		}
 	}
@@ -193,8 +209,27 @@ int main() {
 			int vert1 = i + 1;
 			int vert2 = i % radius_resolution + 2;
 			//int layer = 0;
-			fprintf(obj, "f %i %i %i\n", 1 + layer, vert1 + layer, vert2 + layer);
+			v3 base = positions_obj[layer];
+			v3 stick = positions_obj[vert1 + layer - 1];
+			v3 new = v3_fdiv(v3_add(base, stick), 2);
+			fprintf(obj, "v %f %f %f\n", new.x, new.y, new.z);
+			vert_id++;
+
+			v3 stick2 = positions_obj[vert2 + layer - 1];
+			v3 new2 = v3_fdiv(v3_add(base, stick2), 2);
+			fprintf(obj, "v %f %f %f\n", new2.x, new2.y, new2.z);
+			vert_id++;
+
+			// caps
+			fprintf(obj, "f %i %i %i\n", vert_id, vert_id-1, 1 + layer);
+
+			fprintf(obj, "f %i %i %i\n", vert_id-1, vert_id, vert1+layer);
+			fprintf(obj, "f %i %i %i\n", vert_id, vert2+layer, vert1+layer);
+
+
 			fprintf(obj, "f %i %i %i\n", 1 + n_layer, vert1 + n_layer, vert2 + n_layer);
+
+			// walls
 			fprintf(obj, "f %i %i %i \n", vert1 + layer, vert2 + layer, vert2 + n_layer); 
 			fprintf(obj, "f %i %i %i \n", vert1 + layer, vert2 + n_layer, vert1 + n_layer); 
 		}
@@ -202,6 +237,7 @@ int main() {
 
 	free(values);
 	free(positions);
+	free(positions_obj);
 	fclose(f);
 	fclose(obj);
 }
