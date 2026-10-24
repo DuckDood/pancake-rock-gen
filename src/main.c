@@ -246,9 +246,10 @@ int main() {
 					int vert2 = i % radius_resolution + 2;
 
 					if(i != radius_resolution) {
-						fprintf(obj, "f %i %i %i %i\n", vert_id - radius_resolution + i + 1, vert_id - radius_resolution + i, vert1 + layer, vert2 + layer);
+						fprintf(obj, "f %i %i %i %i\n", vert2 + layer, vert1 + layer, vert_id - radius_resolution + i, vert_id - radius_resolution + i + 1);
 					} else {
-						fprintf(obj, "f %i %i %i %i\n", vert_id - radius_resolution + i + 1 - radius_resolution, vert_id - radius_resolution + i, vert1 + layer, vert2 + layer);
+						//fprintf(obj, "f %i %i %i %i\n", vert_id - radius_resolution + i + 1 - radius_resolution, vert_id - radius_resolution + i, vert1 + layer, vert2 + layer);
+						fprintf(obj, "f %i %i %i %i\n", vert2 + layer, vert1 + layer, vert_id - radius_resolution + i, vert_id - radius_resolution + i + 1 - radius_resolution);
 					}
 				} else {
 					int vert1 = i + 1;
