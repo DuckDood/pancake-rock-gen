@@ -242,6 +242,14 @@ int main() {
 						fprintf(obj, "f %i %i %i\n", vert_id - radius_resolution + 1, vert_id, layer+1);
 					}
 				} else if (subdivision == cap_subdivisions) {
+					int vert1 = i + 1;
+					int vert2 = i % radius_resolution + 2;
+
+					if(i != radius_resolution) {
+						fprintf(obj, "f %i %i %i %i\n", vert_id - radius_resolution + i + 1, vert_id - radius_resolution + i, vert1 + layer, vert2 + layer);
+					} else {
+						fprintf(obj, "f %i %i %i %i\n", vert_id - radius_resolution + i + 1 - radius_resolution, vert_id - radius_resolution + i, vert1 + layer, vert2 + layer);
+					}
 				} else {
 					int vert1 = i + 1;
 					int vert2 = i % radius_resolution + 2;
