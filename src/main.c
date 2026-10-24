@@ -31,6 +31,9 @@ v3 v3_div(v3 a, v3 b){
 v3 v3_fdiv(v3 a, float b){
 	return (v3){a.x / b, a.y / b, a.z / b}; 
 }
+v3 v3_fmul(v3 a, float b){
+	return (v3){a.x * b, a.y * b, a.z * b}; 
+}
 
 v3 v3_add(v3 a, v3 b){
 	return (v3){a.x + b.x, a.y + b.y, a.z + b.z}; 
@@ -39,6 +42,11 @@ v3 v3_add(v3 a, v3 b){
 v3 v3_sub(v3 a, v3 b){
 	return (v3){a.x - b.x, a.y - b.y, a.z - b.z}; 
 }
+
+v3 v3_lerp(v3 a, v3 b, float t) {
+	return v3_add(v3_fmul(a, 1-t), v3_fmul(b, t));
+}
+
 float v3_len(v3 a){
 	return sqrt(a.x * a.x + a.y * a.y + a.z * a.z);
 }
@@ -143,7 +151,7 @@ int main() {
 	int layer_count = 30;
 	float layer_step = 1;
 	v3 *positions = malloc(radius_resolution * layer_count * sizeof(v3));
-	v3 *positions_obj = malloc((radius_resolution * layer_count * 3) * sizeof(v3));
+	v3 *positions_obj = malloc((radius_resolution * layer_count * 5) * sizeof(v3));
 	const float step_size = 1.;
 	for(int z = 0; z < layer_count; ++z) {
 #pragma omp parallel for
@@ -200,6 +208,7 @@ int main() {
 		}
 	}
 	//fprintf(obj, "v %f %f %f\n", 0., 0., 1.);
+	int cap_subdivisions = 7;
 
 	for(int z = 0; z < layer_count; ++z) {
 		for(int i = 1; i <= radius_resolution; ++i) {
@@ -213,7 +222,7 @@ int main() {
 
 
 			// top cap
-			v3 top_base = positions_obj[layer];
+			/*v3 top_base = positions_obj[layer];
 			v3 top_stick = positions_obj[vert1 + layer - 1];
 			v3 top_new = v3_fdiv(v3_add(top_base, top_stick), 2);
 			fprintf(obj, "v %f %f %f\n", top_new.x, top_new.y, top_new.z);
@@ -227,7 +236,50 @@ int main() {
 			fprintf(obj, "f %i %i %i\n", vert_id, vert_id-1, 1 + layer);
 
 			fprintf(obj, "f %i %i %i\n", vert_id-1, vert_id, vert1+layer);
-			fprintf(obj, "f %i %i %i\n", vert_id, vert2+layer, vert1+layer);
+			fprintf(obj, "f %i %i %i\n", vert_id, vert2+layer, vert1+layer);*/
+			for(int i = 1; i <= cap_subdivisions; ++i) {
+				float lerp_factor = (float)i / (cap_subdivisions+1);
+				float lerp_factor_n = (float)(i+1) / (cap_subdivisions+1);
+				if(i == 1) {
+					v3 top_base = positions_obj[layer];
+					v3 top_stick = positions_obj[vert1 + layer - 1];
+					v3 top_new = v3_lerp(top_base, top_stick, lerp_factor_n);
+					fprintf(obj, "v %f %f %f\n", top_new.x, top_new.y, top_new.z);
+					vert_id++;
+
+					v3 top_stick2 = positions_obj[vert2 + layer - 1];
+					v3 top_new2 = v3_lerp(top_base, top_stick2, lerp_factor_n);
+					fprintf(obj, "v %f %f %f\n", top_new2.x, top_new2.y, top_new2.z);
+					vert_id++;
+
+
+
+					fprintf(obj, "f %i %i %i\n", vert_id, vert_id-1, 1 + layer);
+
+					//fprintf(obj, "f %i %i %i\n", vert_id-3, vert_id-2, vert1+layer);
+					//fprintf(obj, "f %i %i %i\n", vert_id-2, vert2+layer, vert1+layer);
+				} else if(i == cap_subdivisions) {
+					fprintf(obj, "f %i %i %i\n", vert_id-1, vert_id, vert1+layer);
+					fprintf(obj, "f %i %i %i\n", vert_id, vert2+layer, vert1+layer);
+				} else{
+					v3 top_base = positions_obj[layer];
+					v3 top_stick = positions_obj[vert1 + layer - 1];
+
+					v3 top_stick2 = positions_obj[vert2 + layer - 1];
+
+					v3 top_next_new = v3_lerp(top_base, top_stick, lerp_factor_n);
+					fprintf(obj, "v %f %f %f\n", top_next_new.x, top_next_new.y, top_next_new.z);
+					vert_id++;
+
+					v3 top_next_new2 = v3_lerp(top_base, top_stick2, lerp_factor_n);
+					fprintf(obj, "v %f %f %f\n", top_next_new2.x, top_next_new2.y, top_next_new2.z);
+					vert_id++;
+
+					fprintf(obj, "f %i %i %i\n", vert_id-3, vert_id-2, vert_id-1);
+					fprintf(obj, "f %i %i %i\n", vert_id-2, vert_id, vert_id-1);
+
+				}
+			}
 
 			// bottom cap
 			v3 bottom_base = positions_obj[n_layer];
