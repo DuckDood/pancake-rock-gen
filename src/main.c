@@ -208,44 +208,61 @@ int main() {
 		}
 	}
 	//fprintf(obj, "v %f %f %f\n", 0., 0., 1.);
-	int cap_subdivisions = 7;
+	int cap_subdivisions = 4;
 
 	for(int z = 0; z < layer_count; ++z) {
-		for(int i = 1; i <= radius_resolution; ++i) {
+		int layer = z * (radius_resolution+1) * 2;
+		int n_layer = layer + radius_resolution + 1;
+
+		for(int subdivision = 1; subdivision <= cap_subdivisions; ++subdivision) {
+			float lerp_factor = (float)subdivision / (cap_subdivisions+1);
+			float lerp_factor_next = (float)(subdivision+1) / (cap_subdivisions+1);
+
+			for(int i = 1; i <= radius_resolution; ++i) {
+				if(subdivision == 1) {
+					int vert1 = i + 1;
+					int vert2 = i % radius_resolution + 2;
+
+					v3 top_base = positions_obj[layer];
+					v3 top_stick = positions_obj[vert2 + layer - 1];
+
+					if(i == 1) {
+						v3 top_stick = positions_obj[vert1 + layer - 1];
+
+						v3 mid = v3_lerp(top_base, top_stick, lerp_factor);
+						fprintf(obj, "v %f %f %f\n", mid.x, mid.y, mid.z);
+						vert_id++;
+					}
+					if(i != radius_resolution) {
+						v3 mid = v3_lerp(top_base, top_stick, lerp_factor);
+						fprintf(obj, "v %f %f %f\n", mid.x, mid.y, mid.z);
+						vert_id++;
+						fprintf(obj, "f %i %i %i\n", layer+1, vert_id, vert_id - 1);
+					} else {
+						fprintf(obj, "f %i %i %i\n", layer+1, vert_id - radius_resolution+1, vert_id - 1);
+					}
+				}
+			}
+		}
+	}
+	/*for(int z = 0; z < layer_count; ++z) {
+		for(int circle_index = 1; circle_index <= radius_resolution; ++circle_index) {
 			int layer = z * (radius_resolution+1) * 2;
 			int n_layer = layer + radius_resolution + 1;
 
-			int vert1 = i + 1;
-			int vert2 = i % radius_resolution + 2;
-			//int layer = 0;
-			
-
-
-			// top cap
-			/*v3 top_base = positions_obj[layer];
-			v3 top_stick = positions_obj[vert1 + layer - 1];
-			v3 top_new = v3_fdiv(v3_add(top_base, top_stick), 2);
-			fprintf(obj, "v %f %f %f\n", top_new.x, top_new.y, top_new.z);
-			vert_id++;
-
-			v3 top_stick2 = positions_obj[vert2 + layer - 1];
-			v3 top_new2 = v3_fdiv(v3_add(top_base, top_stick2), 2);
-			fprintf(obj, "v %f %f %f\n", top_new2.x, top_new2.y, top_new2.z);
-			vert_id++;
-
-			fprintf(obj, "f %i %i %i\n", vert_id, vert_id-1, 1 + layer);
-
-			fprintf(obj, "f %i %i %i\n", vert_id-1, vert_id, vert1+layer);
-			fprintf(obj, "f %i %i %i\n", vert_id, vert2+layer, vert1+layer);*/
+			int vert1 = circle_index + 1;
+			int vert2 = circle_index % radius_resolution + 2;
 			for(int i = 1; i <= cap_subdivisions; ++i) {
 				float lerp_factor = (float)i / (cap_subdivisions+1);
 				float lerp_factor_n = (float)(i+1) / (cap_subdivisions+1);
 				if(i == 1) {
 					v3 top_base = positions_obj[layer];
 					v3 top_stick = positions_obj[vert1 + layer - 1];
-					v3 top_new = v3_lerp(top_base, top_stick, lerp_factor_n);
-					fprintf(obj, "v %f %f %f\n", top_new.x, top_new.y, top_new.z);
-					vert_id++;
+					if(circle_index == 1) {
+						v3 top_new = v3_lerp(top_base, top_stick, lerp_factor_n);
+						fprintf(obj, "v %f %f %f\n", top_new.x, top_new.y, top_new.z);
+						vert_id++;
+					}
 
 					v3 top_stick2 = positions_obj[vert2 + layer - 1];
 					v3 top_new2 = v3_lerp(top_base, top_stick2, lerp_factor_n);
@@ -254,29 +271,30 @@ int main() {
 
 
 
-					fprintf(obj, "f %i %i %i\n", vert_id, vert_id-1, 1 + layer);
+					if(circle_index == 1) {
+						fprintf(obj, "f %i %i %i\n", vert_id, vert_id-1, 1 + layer);
+					} else {
+						fprintf(obj, "f %i %i %i\n", vert_id, vert_id-cap_subdivisions- 1, 1 + layer);
+					}
 
 					//fprintf(obj, "f %i %i %i\n", vert_id-3, vert_id-2, vert1+layer);
 					//fprintf(obj, "f %i %i %i\n", vert_id-2, vert2+layer, vert1+layer);
 				} else if(i == cap_subdivisions) {
-					fprintf(obj, "f %i %i %i\n", vert_id-1, vert_id, vert1+layer);
-					fprintf(obj, "f %i %i %i\n", vert_id, vert2+layer, vert1+layer);
+					//fprintf(obj, "f %i %i %i\n", vert_id-1, vert_id, vert1+layer);
+					//fprintf(obj, "f %i %i %i\n", vert_id, vert2+layer, vert1+layer);
 				} else{
 					v3 top_base = positions_obj[layer];
 					v3 top_stick = positions_obj[vert1 + layer - 1];
 
 					v3 top_stick2 = positions_obj[vert2 + layer - 1];
 
-					v3 top_next_new = v3_lerp(top_base, top_stick, lerp_factor_n);
-					fprintf(obj, "v %f %f %f\n", top_next_new.x, top_next_new.y, top_next_new.z);
-					vert_id++;
 
 					v3 top_next_new2 = v3_lerp(top_base, top_stick2, lerp_factor_n);
 					fprintf(obj, "v %f %f %f\n", top_next_new2.x, top_next_new2.y, top_next_new2.z);
 					vert_id++;
 
-					fprintf(obj, "f %i %i %i\n", vert_id-3, vert_id-2, vert_id-1);
-					fprintf(obj, "f %i %i %i\n", vert_id-2, vert_id, vert_id-1);
+					fprintf(obj, "f %i %i %i\n", vert_id-cap_subdivisions-3, vert_id-2, vert_id-cap_subdivisions-1);
+					fprintf(obj, "f %i %i %i\n", vert_id-2, vert_id, vert_id-cap_subdivisions-1);
 
 				}
 			}
@@ -302,7 +320,7 @@ int main() {
 			fprintf(obj, "f %i %i %i \n", vert1 + layer, vert2 + layer, vert2 + n_layer); 
 			fprintf(obj, "f %i %i %i \n", vert1 + layer, vert2 + n_layer, vert1 + n_layer); 
 		}
-	}
+	}*/
 
 	free(values);
 	free(positions);
