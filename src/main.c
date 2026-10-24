@@ -239,7 +239,31 @@ int main() {
 						vert_id++;
 						fprintf(obj, "f %i %i %i\n", layer+1, vert_id, vert_id - 1);
 					} else {
-						fprintf(obj, "f %i %i %i\n", layer+1, vert_id - radius_resolution+1, vert_id - 1);
+						fprintf(obj, "f %i %i %i\n", vert_id - radius_resolution + 1, vert_id, layer+1);
+					}
+				} else if (subdivision == cap_subdivisions) {
+				} else {
+					int vert1 = i + 1;
+					int vert2 = i % radius_resolution + 2;
+
+					v3 top_base = positions_obj[layer];
+					v3 top_stick = positions_obj[vert2 + layer - 1];
+
+					if(i == 1) {
+						v3 top_stick = positions_obj[vert1 + layer - 1];
+
+						v3 mid = v3_lerp(top_base, top_stick, lerp_factor);
+						fprintf(obj, "v %f %f %f\n", mid.x, mid.y, mid.z);
+						vert_id++;
+					}
+					if(i != radius_resolution) {
+						v3 mid = v3_lerp(top_base, top_stick, lerp_factor);
+						fprintf(obj, "v %f %f %f\n", mid.x, mid.y, mid.z);
+						vert_id++;
+						fprintf(obj, "f %i %i %i %i\n", vert_id - radius_resolution-1, vert_id - radius_resolution, vert_id, vert_id - 1);
+						//fprintf(obj, "f %i %i %i %i\n", vert_id - radius_resolution, vert_id - radius_resolution + 1, vert_id, vert_id - 1);
+					} else {
+						fprintf(obj, "f %i %i %i %i\n",   vert_id - radius_resolution + 1, vert_id, vert_id - radius_resolution, vert_id - radius_resolution - radius_resolution + 1);
 					}
 				}
 			}
