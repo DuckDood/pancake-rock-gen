@@ -213,7 +213,15 @@ int main() {
 	for(int z = 0; z < layer_count; ++z) {
 		int layer = z * (radius_resolution+1) * 2;
 		int n_layer = layer + radius_resolution + 1;
+		//fprintf(obj, "f %i %i %i %i\n", vert2 + layer, vert1 + layer, vert_id - radius_resolution + i, vert_id - radius_resolution + i + 1);
+		for(int i = 1; i <= radius_resolution; ++i) {
+			int vert1 = i + 1;
+			int vert2 = i % radius_resolution + 2;
+			fprintf(obj, "f %i %i %i %i\n", vert2 + layer, vert1 + layer, vert1 + n_layer, vert2 + n_layer);
+		}
 
+		for(int i = 0; i <= 1; ++i) {
+			if(i == 1) layer = n_layer;
 		for(int subdivision = 1; subdivision <= cap_subdivisions; ++subdivision) {
 			float lerp_factor = (float)subdivision / (cap_subdivisions+1);
 			float lerp_factor_next = (float)(subdivision+1) / (cap_subdivisions+1);
@@ -276,6 +284,7 @@ int main() {
 					}
 				}
 			}
+		}
 		}
 	}
 	/*for(int z = 0; z < layer_count; ++z) {
