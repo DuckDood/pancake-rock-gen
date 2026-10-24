@@ -217,11 +217,12 @@ int main() {
 		for(int i = 1; i <= radius_resolution; ++i) {
 			int vert1 = i + 1;
 			int vert2 = i % radius_resolution + 2;
-			fprintf(obj, "f %i %i %i %i\n", vert2 + layer, vert1 + layer, vert1 + n_layer, vert2 + n_layer);
+			//fprintf(obj, "f %i %i %i %i\n", vert2 + layer, vert1 + layer, vert1 + n_layer, vert2 + n_layer);
+			fprintf(obj, "f %i %i %i %i\n", vert2 + n_layer, vert1 + n_layer, vert1 + layer, vert2 + layer);
 		}
 
-		for(int i = 0; i <= 1; ++i) {
-			if(i == 1) layer = n_layer;
+		//for(int i = 0; i <= 1; ++i) {
+			//if(i == 1) layer = z * (radius_resolution+1) * 2;
 		for(int subdivision = 1; subdivision <= cap_subdivisions; ++subdivision) {
 			float lerp_factor = (float)subdivision / (cap_subdivisions+1);
 			float lerp_factor_next = (float)(subdivision+1) / (cap_subdivisions+1);
@@ -285,7 +286,79 @@ int main() {
 				}
 			}
 		}
+
+
+
+		layer = n_layer;
+		for(int subdivision = 1; subdivision <= cap_subdivisions; ++subdivision) {
+			float lerp_factor = (float)subdivision / (cap_subdivisions+1);
+			float lerp_factor_next = (float)(subdivision+1) / (cap_subdivisions+1);
+
+			for(int i = 1; i <= radius_resolution; ++i) {
+				if(subdivision == 1) {
+					int vert1 = i + 1;
+					int vert2 = i % radius_resolution + 2;
+
+					v3 top_base = positions_obj[layer];
+					v3 top_stick = positions_obj[vert2 + layer - 1];
+
+					if(i == 1) {
+						v3 top_stick = positions_obj[vert1 + layer - 1];
+
+						v3 mid = v3_lerp(top_base, top_stick, lerp_factor);
+						fprintf(obj, "v %f %f %f\n", mid.x, mid.y, mid.z);
+						vert_id++;
+					}
+					if(i != radius_resolution) {
+						v3 mid = v3_lerp(top_base, top_stick, lerp_factor);
+						fprintf(obj, "v %f %f %f\n", mid.x, mid.y, mid.z);
+						vert_id++;
+						//fprintf(obj, "f %i %i %i\n", vert_id, vert_id - 1, layer+1);
+						fprintf(obj, "f %i %i %i\n", layer+1, vert_id-1, vert_id);
+					} else {
+						//fprintf(obj, "f %i %i %i\n", vert_id, layer+1, vert_id - radius_resolution + 1);
+						fprintf(obj, "f %i %i %i\n", vert_id - radius_resolution + 1, layer+1, vert_id);
+					}
+				} else if (subdivision == cap_subdivisions) {
+					int vert1 = i + 1;
+					int vert2 = i % radius_resolution + 2;
+
+					if(i != radius_resolution) {
+						//fprintf(obj, "f %i %i %i %i\n", vert2 + layer, vert1 + layer, vert_id - radius_resolution + i, vert_id - radius_resolution + i + 1);
+						fprintf(obj, "f %i %i %i %i\n", vert_id - radius_resolution + i + 1, vert_id - radius_resolution + i, vert1 + layer, vert2 + layer);
+					} else {
+						fprintf(obj, "f %i %i %i %i\n", vert_id - radius_resolution + i + 1 - radius_resolution, vert_id - radius_resolution + i, vert1 + layer, vert2 + layer);
+						//fprintf(obj, "f %i %i %i %i\n", vert2 + layer, vert1 + layer, vert_id - radius_resolution + i, vert_id - radius_resolution + i + 1 - radius_resolution);
+					}
+				} else {
+					int vert1 = i + 1;
+					int vert2 = i % radius_resolution + 2;
+
+					v3 top_base = positions_obj[layer];
+					v3 top_stick = positions_obj[vert2 + layer - 1];
+
+					if(i == 1) {
+						v3 top_stick = positions_obj[vert1 + layer - 1];
+
+						v3 mid = v3_lerp(top_base, top_stick, lerp_factor);
+						fprintf(obj, "v %f %f %f\n", mid.x, mid.y, mid.z);
+						vert_id++;
+					}
+					if(i != radius_resolution) {
+						v3 mid = v3_lerp(top_base, top_stick, lerp_factor);
+						fprintf(obj, "v %f %f %f\n", mid.x, mid.y, mid.z);
+						vert_id++;
+						//fprintf(obj, "f %i %i %i %i\n", vert_id - radius_resolution-1, vert_id - radius_resolution, vert_id, vert_id - 1);
+						fprintf(obj, "f %i %i %i %i\n", vert_id - 1, vert_id, vert_id - radius_resolution, vert_id - radius_resolution-1);
+						//fprintf(obj, "f %i %i %i %i\n", vert_id - radius_resolution, vert_id - radius_resolution + 1, vert_id, vert_id - 1);
+					} else {
+						//fprintf(obj, "f %i %i %i %i\n",   vert_id - radius_resolution + 1, vert_id, vert_id - radius_resolution, vert_id - radius_resolution - radius_resolution + 1);
+						fprintf(obj, "f %i %i %i %i\n", vert_id - radius_resolution - radius_resolution + 1, vert_id - radius_resolution, vert_id, vert_id - radius_resolution + 1);
+					}
+				}
+			}
 		}
+		//}
 	}
 	/*for(int z = 0; z < layer_count; ++z) {
 		for(int circle_index = 1; circle_index <= radius_resolution; ++circle_index) {
