@@ -150,8 +150,11 @@ int main() {
 	const int ray_resolution=75;
 	int layer_count = 30;
 	float layer_step = 1;
+	int cap_subdivisions = 11;
 	v3 *positions = malloc(radius_resolution * layer_count * sizeof(v3));
-	v3 *positions_obj = malloc((radius_resolution * layer_count * 5) * sizeof(v3));
+	v3 *positions_obj = malloc((radius_resolution * layer_count + radius_resolution * layer_count * cap_subdivisions + radius_resolution) * 2 * sizeof(v3));
+	int *triangle_indices = malloc((radius_resolution * cap_subdivisions * layer_count * 2 * 2 + radius_resolution * 2) * 3 * sizeof(int));
+	int triangle_ind_id = 0;
 	const float step_size = 1.;
 	for(int z = 0; z < layer_count; ++z) {
 #pragma omp parallel for
@@ -179,7 +182,7 @@ int main() {
 	int vert_id = 0;
 
 	for(int z = 0; z < layer_count; ++z) {
-		fprintf(obj, "v %f %f %f\n", 0., 0., (float)z * layer_step);
+		//fprintf(obj, "v %f %f %f\n", 0., 0., (float)z * layer_step);
 		positions_obj[vert_id] = (v3){0., 0., (float)z * layer_step};
 
 		vert_id++;
@@ -190,35 +193,45 @@ int main() {
 
 		for(int i = 0; i < radius_resolution; ++i) {
 			v3 pos = positions[i + radius_resolution * z];
-			fprintf(obj, "v %f %f %f\n", pos.x * scale.x, pos.y * scale.y, (float)z*layer_step);
+			//fprintf(obj, "v %f %f %f\n", pos.x * scale.x, pos.y * scale.y, (float)z*layer_step);
 			positions_obj[vert_id] = (v3){pos.x * scale.x, pos.y * scale.y, (float)z * layer_step};
 			vert_id++;
-			//fprintf(obj, "v %f %f %f\n", positions[i].x, positions[i].y, 1.);
+			////fprintf(obj, "v %f %f %f\n", positions[i].x, positions[i].y, 1.);
 		}
 
-		fprintf(obj, "v %f %f %f\n", 0., 0., (float)(z+1)*layer_step);
+		//fprintf(obj, "v %f %f %f\n", 0., 0., (float)(z+1)*layer_step);
 		positions_obj[vert_id] = (v3){0., 0., (float)(z+1) * layer_step};
 		vert_id++;
 		for(int i = 0; i < radius_resolution; ++i) {
 			v3 pos = positions[i + radius_resolution * z];
-			fprintf(obj, "v %f %f %f\n", pos.x * scale.x, pos.y * scale.y, (float)(z+1)*layer_step);
+			//fprintf(obj, "v %f %f %f\n", pos.x * scale.x, pos.y * scale.y, (float)(z+1)*layer_step);
 			positions_obj[vert_id] = (v3){pos.x * scale.x, pos.y * scale.y, (float)(z+1) * layer_step};
 			vert_id++;
-			//fprintf(obj, "v %f %f %f\n", positions[i].x, positions[i].y, 1.);
+			////fprintf(obj, "v %f %f %f\n", positions[i].x, positions[i].y, 1.);
 		}
 	}
-	//fprintf(obj, "v %f %f %f\n", 0., 0., 1.);
-	int cap_subdivisions = 4;
+	////fprintf(obj, "v %f %f %f\n", 0., 0., 1.);
 
 	for(int z = 0; z < layer_count; ++z) {
 		int layer = z * (radius_resolution+1) * 2;
 		int n_layer = layer + radius_resolution + 1;
-		//fprintf(obj, "f %i %i %i %i\n", vert2 + layer, vert1 + layer, vert_id - radius_resolution + i, vert_id - radius_resolution + i + 1);
+		////fprintf(obj, "f %i %i %i %i\n", vert2 + layer, vert1 + layer, vert_id - radius_resolution + i, vert_id - radius_resolution + i + 1);
 		for(int i = 1; i <= radius_resolution; ++i) {
 			int vert1 = i + 1;
 			int vert2 = i % radius_resolution + 2;
-			//fprintf(obj, "f %i %i %i %i\n", vert2 + layer, vert1 + layer, vert1 + n_layer, vert2 + n_layer);
-			fprintf(obj, "f %i %i %i %i\n", vert2 + n_layer, vert1 + n_layer, vert1 + layer, vert2 + layer);
+			////fprintf(obj, "f %i %i %i %i\n", vert2 + layer, vert1 + layer, vert1 + n_layer, vert2 + n_layer);
+			////fprintf(obj, "f %i %i %i %i\n", vert2 + n_layer, vert1 + n_layer, vert1 + layer, vert2 + layer);
+
+
+			//fprintf(obj, "f %i %i %i\n", vert2 + n_layer, vert1 + n_layer, vert1 + layer);
+			triangle_indices[triangle_ind_id++] = vert2 + n_layer;
+			triangle_indices[triangle_ind_id++] = vert1 + n_layer;
+			triangle_indices[triangle_ind_id++] = vert1 + layer;
+
+			//fprintf(obj, "f %i %i %i\n", vert2 + n_layer, vert1 + layer, vert2 + layer);
+			triangle_indices[triangle_ind_id++] = vert2 + n_layer;
+			triangle_indices[triangle_ind_id++] = vert1 + layer;
+			triangle_indices[triangle_ind_id++] = vert2 + layer;
 		}
 
 		//for(int i = 0; i <= 1; ++i) {
@@ -239,26 +252,50 @@ int main() {
 						v3 top_stick = positions_obj[vert1 + layer - 1];
 
 						v3 mid = v3_lerp(top_base, top_stick, lerp_factor);
-						fprintf(obj, "v %f %f %f\n", mid.x, mid.y, mid.z);
+						//fprintf(obj, "v %f %f %f\n", mid.x, mid.y, mid.z);
+						positions_obj[vert_id] = (v3){mid.x, mid.y, mid.z};
 						vert_id++;
 					}
 					if(i != radius_resolution) {
 						v3 mid = v3_lerp(top_base, top_stick, lerp_factor);
-						fprintf(obj, "v %f %f %f\n", mid.x, mid.y, mid.z);
+						//fprintf(obj, "v %f %f %f\n", mid.x, mid.y, mid.z);
+						positions_obj[vert_id] = (v3){mid.x, mid.y, mid.z};
 						vert_id++;
-						fprintf(obj, "f %i %i %i\n", layer+1, vert_id, vert_id - 1);
+						//fprintf(obj, "f %i %i %i\n", layer+1, vert_id, vert_id - 1);
+						triangle_indices[triangle_ind_id++] = layer+1;
+						triangle_indices[triangle_ind_id++] = vert_id;
+						triangle_indices[triangle_ind_id++] = vert_id - 1;
 					} else {
-						fprintf(obj, "f %i %i %i\n", vert_id - radius_resolution + 1, vert_id, layer+1);
+						//fprintf(obj, "f %i %i %i\n", vert_id - radius_resolution + 1, vert_id, layer+1);
+						triangle_indices[triangle_ind_id++] = vert_id - radius_resolution + 1;
+						triangle_indices[triangle_ind_id++] = vert_id;
+						triangle_indices[triangle_ind_id++] = layer+1;
 					}
 				} else if (subdivision == cap_subdivisions) {
 					int vert1 = i + 1;
 					int vert2 = i % radius_resolution + 2;
 
 					if(i != radius_resolution) {
-						fprintf(obj, "f %i %i %i %i\n", vert2 + layer, vert1 + layer, vert_id - radius_resolution + i, vert_id - radius_resolution + i + 1);
+						////fprintf(obj, "f %i %i %i %i\n", vert2 + layer, vert1 + layer, vert_id - radius_resolution + i, vert_id - radius_resolution + i + 1);
+						//fprintf(obj, "f %i %i %i\n", vert2 + layer, vert1 + layer, vert_id - radius_resolution + i);
+						triangle_indices[triangle_ind_id++] = vert2 + layer;
+						triangle_indices[triangle_ind_id++] = vert1 + layer;
+						triangle_indices[triangle_ind_id++] = vert_id - radius_resolution + i;
+						//fprintf(obj, "f %i %i %i\n", vert2 + layer, vert_id - radius_resolution + i, vert_id - radius_resolution + i + 1);
+						triangle_indices[triangle_ind_id++] = vert2 + layer;
+						triangle_indices[triangle_ind_id++] = vert_id - radius_resolution + i;
+						triangle_indices[triangle_ind_id++] = vert_id - radius_resolution + i + 1;
 					} else {
-						//fprintf(obj, "f %i %i %i %i\n", vert_id - radius_resolution + i + 1 - radius_resolution, vert_id - radius_resolution + i, vert1 + layer, vert2 + layer);
-						fprintf(obj, "f %i %i %i %i\n", vert2 + layer, vert1 + layer, vert_id - radius_resolution + i, vert_id - radius_resolution + i + 1 - radius_resolution);
+						////fprintf(obj, "f %i %i %i %i\n", vert_id - radius_resolution + i + 1 - radius_resolution, vert_id - radius_resolution + i, vert1 + layer, vert2 + layer);
+						////fprintf(obj, "f %i %i %i %i\n", vert2 + layer, vert1 + layer, vert_id - radius_resolution + i, vert_id - radius_resolution + i + 1 - radius_resolution);
+						//fprintf(obj, "f %i %i %i\n", vert2 + layer, vert1 + layer, vert_id - radius_resolution + i);
+						triangle_indices[triangle_ind_id++] = vert2 + layer;
+						triangle_indices[triangle_ind_id++] = vert1 + layer;
+						triangle_indices[triangle_ind_id++] = vert_id - radius_resolution + i;
+						//fprintf(obj, "f %i %i %i\n", vert2 + layer, vert_id - radius_resolution + i, vert_id - radius_resolution + i + 1 - radius_resolution);
+						triangle_indices[triangle_ind_id++] = vert2 + layer;
+						triangle_indices[triangle_ind_id++] = vert_id - radius_resolution + i;
+						triangle_indices[triangle_ind_id++] = vert_id - radius_resolution + i + 1 - radius_resolution;
 					}
 				} else {
 					int vert1 = i + 1;
@@ -271,17 +308,34 @@ int main() {
 						v3 top_stick = positions_obj[vert1 + layer - 1];
 
 						v3 mid = v3_lerp(top_base, top_stick, lerp_factor);
-						fprintf(obj, "v %f %f %f\n", mid.x, mid.y, mid.z);
+						//fprintf(obj, "v %f %f %f\n", mid.x, mid.y, mid.z);
+						positions_obj[vert_id] = (v3){mid.x, mid.y, mid.z};
 						vert_id++;
 					}
 					if(i != radius_resolution) {
 						v3 mid = v3_lerp(top_base, top_stick, lerp_factor);
-						fprintf(obj, "v %f %f %f\n", mid.x, mid.y, mid.z);
+						//fprintf(obj, "v %f %f %f\n", mid.x, mid.y, mid.z);
+						positions_obj[vert_id] = (v3){mid.x, mid.y, mid.z};
 						vert_id++;
-						fprintf(obj, "f %i %i %i %i\n", vert_id - radius_resolution-1, vert_id - radius_resolution, vert_id, vert_id - 1);
-						//fprintf(obj, "f %i %i %i %i\n", vert_id - radius_resolution, vert_id - radius_resolution + 1, vert_id, vert_id - 1);
+						////fprintf(obj, "f %i %i %i %i\n", vert_id - radius_resolution-1, vert_id - radius_resolution, vert_id, vert_id - 1);
+						//fprintf(obj, "f %i %i %i\n", vert_id - radius_resolution-1, vert_id - radius_resolution, vert_id);
+						triangle_indices[triangle_ind_id++] = vert_id - radius_resolution-1;
+						triangle_indices[triangle_ind_id++] = vert_id - radius_resolution;
+						triangle_indices[triangle_ind_id++] = vert_id;
+						//fprintf(obj, "f %i %i %i\n", vert_id - radius_resolution-1, vert_id, vert_id - 1);
+						triangle_indices[triangle_ind_id++] = vert_id - radius_resolution-1;
+						triangle_indices[triangle_ind_id++] = vert_id;
+						triangle_indices[triangle_ind_id++] = vert_id - 1;
 					} else {
-						fprintf(obj, "f %i %i %i %i\n",   vert_id - radius_resolution + 1, vert_id, vert_id - radius_resolution, vert_id - radius_resolution - radius_resolution + 1);
+						////fprintf(obj, "f %i %i %i %i\n",   vert_id - radius_resolution + 1, vert_id, vert_id - radius_resolution, vert_id - radius_resolution - radius_resolution + 1);
+						//fprintf(obj, "f %i %i %i\n", vert_id - radius_resolution + 1, vert_id, vert_id - radius_resolution);
+						triangle_indices[triangle_ind_id++] = vert_id - radius_resolution + 1;
+						triangle_indices[triangle_ind_id++] = vert_id;
+						triangle_indices[triangle_ind_id++] = vert_id - radius_resolution;
+						//fprintf(obj, "f %i %i %i\n", vert_id - radius_resolution + 1, vert_id - radius_resolution, vert_id - radius_resolution - radius_resolution + 1);
+						triangle_indices[triangle_ind_id++] = vert_id - radius_resolution + 1;
+						triangle_indices[triangle_ind_id++] = vert_id - radius_resolution;
+						triangle_indices[triangle_ind_id++] = vert_id - radius_resolution - radius_resolution + 1;
 					}
 				}
 			}
@@ -306,29 +360,52 @@ int main() {
 						v3 top_stick = positions_obj[vert1 + layer - 1];
 
 						v3 mid = v3_lerp(top_base, top_stick, lerp_factor);
-						fprintf(obj, "v %f %f %f\n", mid.x, mid.y, mid.z);
+						//fprintf(obj, "v %f %f %f\n", mid.x, mid.y, mid.z);
+						positions_obj[vert_id] = (v3){mid.x, mid.y, mid.z};
 						vert_id++;
 					}
 					if(i != radius_resolution) {
 						v3 mid = v3_lerp(top_base, top_stick, lerp_factor);
-						fprintf(obj, "v %f %f %f\n", mid.x, mid.y, mid.z);
+						//fprintf(obj, "v %f %f %f\n", mid.x, mid.y, mid.z);
+						positions_obj[vert_id] = (v3){mid.x, mid.y, mid.z};
 						vert_id++;
-						//fprintf(obj, "f %i %i %i\n", vert_id, vert_id - 1, layer+1);
-						fprintf(obj, "f %i %i %i\n", layer+1, vert_id-1, vert_id);
+						////fprintf(obj, "f %i %i %i\n", vert_id, vert_id - 1, layer+1);
+						//fprintf(obj, "f %i %i %i\n", layer+1, vert_id-1, vert_id);
+						triangle_indices[triangle_ind_id++] = layer+1;
+						triangle_indices[triangle_ind_id++] = vert_id-1;
+						triangle_indices[triangle_ind_id++] = vert_id;
 					} else {
-						//fprintf(obj, "f %i %i %i\n", vert_id, layer+1, vert_id - radius_resolution + 1);
-						fprintf(obj, "f %i %i %i\n", vert_id - radius_resolution + 1, layer+1, vert_id);
+						////fprintf(obj, "f %i %i %i\n", vert_id, layer+1, vert_id - radius_resolution + 1);
+						//fprintf(obj, "f %i %i %i\n", vert_id - radius_resolution + 1, layer+1, vert_id);
+						triangle_indices[triangle_ind_id++] = vert_id - radius_resolution + 1;
+						triangle_indices[triangle_ind_id++] = layer+1;
+						triangle_indices[triangle_ind_id++] = vert_id;
 					}
 				} else if (subdivision == cap_subdivisions) {
 					int vert1 = i + 1;
 					int vert2 = i % radius_resolution + 2;
 
 					if(i != radius_resolution) {
-						//fprintf(obj, "f %i %i %i %i\n", vert2 + layer, vert1 + layer, vert_id - radius_resolution + i, vert_id - radius_resolution + i + 1);
-						fprintf(obj, "f %i %i %i %i\n", vert_id - radius_resolution + i + 1, vert_id - radius_resolution + i, vert1 + layer, vert2 + layer);
+						////fprintf(obj, "f %i %i %i %i\n", vert2 + layer, vert1 + layer, vert_id - radius_resolution + i, vert_id - radius_resolution + i + 1);
+						////fprintf(obj, "f %i %i %i %i\n", vert_id - radius_resolution + i + 1, vert_id - radius_resolution + i, vert1 + layer, vert2 + layer);
+						//fprintf(obj, "f %i %i %i\n", vert_id - radius_resolution + i + 1, vert_id - radius_resolution + i, vert1 + layer);
+						triangle_indices[triangle_ind_id++] = vert_id - radius_resolution + i + 1;
+						triangle_indices[triangle_ind_id++] = vert_id - radius_resolution + i;
+						triangle_indices[triangle_ind_id++] = vert1 + layer;
+						//fprintf(obj, "f %i %i %i\n", vert_id - radius_resolution + i + 1, vert1 + layer, vert2 + layer);
+						triangle_indices[triangle_ind_id++] = vert_id - radius_resolution + i + 1;
+						triangle_indices[triangle_ind_id++] = vert1 + layer;
+						triangle_indices[triangle_ind_id++] = vert2 + layer;
 					} else {
-						fprintf(obj, "f %i %i %i %i\n", vert_id - radius_resolution + i + 1 - radius_resolution, vert_id - radius_resolution + i, vert1 + layer, vert2 + layer);
-						//fprintf(obj, "f %i %i %i %i\n", vert2 + layer, vert1 + layer, vert_id - radius_resolution + i, vert_id - radius_resolution + i + 1 - radius_resolution);
+						////fprintf(obj, "f %i %i %i %i\n", vert_id - radius_resolution + i + 1 - radius_resolution, vert_id - radius_resolution + i, vert1 + layer, vert2 + layer);
+						//fprintf(obj, "f %i %i %i\n", vert_id - radius_resolution + i + 1 - radius_resolution, vert_id - radius_resolution + i, vert1 + layer);
+						triangle_indices[triangle_ind_id++] = vert_id - radius_resolution + i + 1 - radius_resolution;
+						triangle_indices[triangle_ind_id++] = vert_id - radius_resolution + i;
+						triangle_indices[triangle_ind_id++] = vert1 + layer;
+						//fprintf(obj, "f %i %i %i\n", vert_id - radius_resolution + i + 1 - radius_resolution, vert1 + layer, vert2 + layer);
+						triangle_indices[triangle_ind_id++] = vert_id - radius_resolution + i + 1 - radius_resolution;
+						triangle_indices[triangle_ind_id++] = vert1 + layer;
+						triangle_indices[triangle_ind_id++] = vert2 + layer;
 					}
 				} else {
 					int vert1 = i + 1;
@@ -341,19 +418,34 @@ int main() {
 						v3 top_stick = positions_obj[vert1 + layer - 1];
 
 						v3 mid = v3_lerp(top_base, top_stick, lerp_factor);
-						fprintf(obj, "v %f %f %f\n", mid.x, mid.y, mid.z);
+						//fprintf(obj, "v %f %f %f\n", mid.x, mid.y, mid.z);
+						positions_obj[vert_id] = (v3){mid.x, mid.y, mid.z};
 						vert_id++;
 					}
 					if(i != radius_resolution) {
 						v3 mid = v3_lerp(top_base, top_stick, lerp_factor);
-						fprintf(obj, "v %f %f %f\n", mid.x, mid.y, mid.z);
+						//fprintf(obj, "v %f %f %f\n", mid.x, mid.y, mid.z);
+						positions_obj[vert_id] = (v3){mid.x, mid.y, mid.z};
 						vert_id++;
-						//fprintf(obj, "f %i %i %i %i\n", vert_id - radius_resolution-1, vert_id - radius_resolution, vert_id, vert_id - 1);
-						fprintf(obj, "f %i %i %i %i\n", vert_id - 1, vert_id, vert_id - radius_resolution, vert_id - radius_resolution-1);
-						//fprintf(obj, "f %i %i %i %i\n", vert_id - radius_resolution, vert_id - radius_resolution + 1, vert_id, vert_id - 1);
+						////fprintf(obj, "f %i %i %i %i\n", vert_id - 1, vert_id, vert_id - radius_resolution, vert_id - radius_resolution-1);
+						//fprintf(obj, "f %i %i %i\n", vert_id - 1, vert_id, vert_id - radius_resolution);
+						triangle_indices[triangle_ind_id++] = vert_id - 1;
+						triangle_indices[triangle_ind_id++] = vert_id;
+						triangle_indices[triangle_ind_id++] = vert_id - radius_resolution;
+						//fprintf(obj, "f %i %i %i\n", vert_id - 1, vert_id - radius_resolution, vert_id - radius_resolution-1);
+						triangle_indices[triangle_ind_id++] = vert_id - 1;
+						triangle_indices[triangle_ind_id++] = vert_id - radius_resolution;
+						triangle_indices[triangle_ind_id++] = vert_id - radius_resolution-1;
 					} else {
-						//fprintf(obj, "f %i %i %i %i\n",   vert_id - radius_resolution + 1, vert_id, vert_id - radius_resolution, vert_id - radius_resolution - radius_resolution + 1);
-						fprintf(obj, "f %i %i %i %i\n", vert_id - radius_resolution - radius_resolution + 1, vert_id - radius_resolution, vert_id, vert_id - radius_resolution + 1);
+						////fprintf(obj, "f %i %i %i %i\n", vert_id - radius_resolution - radius_resolution + 1, vert_id - radius_resolution, vert_id, vert_id - radius_resolution + 1);
+						//fprintf(obj, "f %i %i %i\n", vert_id - radius_resolution - radius_resolution + 1, vert_id - radius_resolution, vert_id);
+						triangle_indices[triangle_ind_id++] = vert_id - radius_resolution - radius_resolution + 1;
+						triangle_indices[triangle_ind_id++] = vert_id - radius_resolution;
+						triangle_indices[triangle_ind_id++] = vert_id;
+						//fprintf(obj, "f %i %i %i\n", vert_id - radius_resolution - radius_resolution + 1, vert_id, vert_id - radius_resolution + 1);
+						triangle_indices[triangle_ind_id++] = vert_id - radius_resolution - radius_resolution + 1;
+						triangle_indices[triangle_ind_id++] = vert_id;
+						triangle_indices[triangle_ind_id++] = vert_id - radius_resolution + 1;
 					}
 				}
 			}
@@ -375,28 +467,34 @@ int main() {
 					v3 top_stick = positions_obj[vert1 + layer - 1];
 					if(circle_index == 1) {
 						v3 top_new = v3_lerp(top_base, top_stick, lerp_factor_n);
-						fprintf(obj, "v %f %f %f\n", top_new.x, top_new.y, top_new.z);
+						//fprintf(obj, "v %f %f %f\n", top_new.x, top_new.y, top_new.z);
 						vert_id++;
 					}
 
 					v3 top_stick2 = positions_obj[vert2 + layer - 1];
 					v3 top_new2 = v3_lerp(top_base, top_stick2, lerp_factor_n);
-					fprintf(obj, "v %f %f %f\n", top_new2.x, top_new2.y, top_new2.z);
+					//fprintf(obj, "v %f %f %f\n", top_new2.x, top_new2.y, top_new2.z);
 					vert_id++;
 
 
 
 					if(circle_index == 1) {
-						fprintf(obj, "f %i %i %i\n", vert_id, vert_id-1, 1 + layer);
+						//fprintf(obj, "f %i %i %i\n", vert_id, vert_id-1, 1 + layer);
+						triangle_indices[triangle_ind_id++] = vert_id;
+						triangle_indices[triangle_ind_id++] = vert_id-1;
+						triangle_indices[triangle_ind_id++] = 1 + layer;
 					} else {
-						fprintf(obj, "f %i %i %i\n", vert_id, vert_id-cap_subdivisions- 1, 1 + layer);
+						//fprintf(obj, "f %i %i %i\n", vert_id, vert_id-cap_subdivisions- 1, 1 + layer);
+						triangle_indices[triangle_ind_id++] = vert_id;
+						triangle_indices[triangle_ind_id++] = vert_id-cap_subdivisions- 1;
+						triangle_indices[triangle_ind_id++] = 1 + layer;
 					}
 
-					//fprintf(obj, "f %i %i %i\n", vert_id-3, vert_id-2, vert1+layer);
-					//fprintf(obj, "f %i %i %i\n", vert_id-2, vert2+layer, vert1+layer);
+					////fprintf(obj, "f %i %i %i\n", vert_id-3, vert_id-2, vert1+layer);
+					////fprintf(obj, "f %i %i %i\n", vert_id-2, vert2+layer, vert1+layer);
 				} else if(i == cap_subdivisions) {
-					//fprintf(obj, "f %i %i %i\n", vert_id-1, vert_id, vert1+layer);
-					//fprintf(obj, "f %i %i %i\n", vert_id, vert2+layer, vert1+layer);
+					////fprintf(obj, "f %i %i %i\n", vert_id-1, vert_id, vert1+layer);
+					////fprintf(obj, "f %i %i %i\n", vert_id, vert2+layer, vert1+layer);
 				} else{
 					v3 top_base = positions_obj[layer];
 					v3 top_stick = positions_obj[vert1 + layer - 1];
@@ -405,11 +503,17 @@ int main() {
 
 
 					v3 top_next_new2 = v3_lerp(top_base, top_stick2, lerp_factor_n);
-					fprintf(obj, "v %f %f %f\n", top_next_new2.x, top_next_new2.y, top_next_new2.z);
+					//fprintf(obj, "v %f %f %f\n", top_next_new2.x, top_next_new2.y, top_next_new2.z);
 					vert_id++;
 
-					fprintf(obj, "f %i %i %i\n", vert_id-cap_subdivisions-3, vert_id-2, vert_id-cap_subdivisions-1);
-					fprintf(obj, "f %i %i %i\n", vert_id-2, vert_id, vert_id-cap_subdivisions-1);
+					//fprintf(obj, "f %i %i %i\n", vert_id-cap_subdivisions-3, vert_id-2, vert_id-cap_subdivisions-1);
+					triangle_indices[triangle_ind_id++] = vert_id-cap_subdivisions-3;
+					triangle_indices[triangle_ind_id++] = vert_id-2;
+					triangle_indices[triangle_ind_id++] = vert_id-cap_subdivisions-1;
+					//fprintf(obj, "f %i %i %i\n", vert_id-2, vert_id, vert_id-cap_subdivisions-1);
+					triangle_indices[triangle_ind_id++] = vert_id-2;
+					triangle_indices[triangle_ind_id++] = vert_id;
+					triangle_indices[triangle_ind_id++] = vert_id-cap_subdivisions-1;
 
 				}
 			}
@@ -418,28 +522,52 @@ int main() {
 			v3 bottom_base = positions_obj[n_layer];
 			v3 bottom_stick = positions_obj[vert1 + n_layer - 1];
 			v3 bottom_new = v3_fdiv(v3_add(bottom_base, bottom_stick), 2);
-			fprintf(obj, "v %f %f %f\n", bottom_new.x, bottom_new.y, bottom_new.z);
+			//fprintf(obj, "v %f %f %f\n", bottom_new.x, bottom_new.y, bottom_new.z);
 			vert_id++;
 
 			v3 bottom_stick2 = positions_obj[vert2 + n_layer - 1];
 			v3 bottom_new2 = v3_fdiv(v3_add(bottom_base, bottom_stick2), 2);
-			fprintf(obj, "v %f %f %f\n", bottom_new2.x, bottom_new2.y, bottom_new2.z);
+			//fprintf(obj, "v %f %f %f\n", bottom_new2.x, bottom_new2.y, bottom_new2.z);
 			vert_id++;
 
-			fprintf(obj, "f %i %i %i\n", 1 + n_layer, vert_id-1, vert_id);
+			//fprintf(obj, "f %i %i %i\n", 1 + n_layer, vert_id-1, vert_id);
+			triangle_indices[triangle_ind_id++] = 1 + n_layer;
+			triangle_indices[triangle_ind_id++] = vert_id-1;
+			triangle_indices[triangle_ind_id++] = vert_id;
 
-			fprintf(obj, "f %i %i %i\n", vert1+n_layer, vert_id, vert_id-1);
-			fprintf(obj, "f %i %i %i\n", vert1+n_layer, vert2+n_layer, vert_id);
+			//fprintf(obj, "f %i %i %i\n", vert1+n_layer, vert_id, vert_id-1);
+			triangle_indices[triangle_ind_id++] = vert1+n_layer;
+			triangle_indices[triangle_ind_id++] = vert_id;
+			triangle_indices[triangle_ind_id++] = vert_id-1;
+			//fprintf(obj, "f %i %i %i\n", vert1+n_layer, vert2+n_layer, vert_id);
+			triangle_indices[triangle_ind_id++] = vert1+n_layer;
+			triangle_indices[triangle_ind_id++] = vert2+n_layer;
+			triangle_indices[triangle_ind_id++] = vert_id;
 
 			// walls
-			fprintf(obj, "f %i %i %i \n", vert1 + layer, vert2 + layer, vert2 + n_layer); 
-			fprintf(obj, "f %i %i %i \n", vert1 + layer, vert2 + n_layer, vert1 + n_layer); 
+			//fprintf(obj, "f %i %i %i \n", vert1 + layer, vert2 + layer, vert2 + n_layer); 
+			triangle_indices[triangle_ind_id++] = vert1 + layer;
+			triangle_indices[triangle_ind_id++] = vert2 + layer;
+			triangle_indices[triangle_ind_id++] = vert2 + n_layer;
+			//fprintf(obj, "f %i %i %i \n", vert1 + layer, vert2 + n_layer, vert1 + n_layer); 
+			triangle_indices[triangle_ind_id++] = vert1 + layer;
+			triangle_indices[triangle_ind_id++] = vert2 + n_layer;
+			triangle_indices[triangle_ind_id++] = vert1 + n_layer;
 		}
 	}*/
+	for(int i = 0; i < vert_id; ++i) {
+		v3 current_vertex = positions_obj[i];
+		fprintf(obj, "v %f %f %f\n", current_vertex.x, current_vertex.y, current_vertex.z);
+	}
+	for(int i = 0; i < triangle_ind_id; i+=3) {
+		fprintf(obj, "f %i %i %i\n", triangle_indices[i], triangle_indices[i+1], triangle_indices[i+2]);
+		//triangle_indices[triangle_ind_id++] = triangle_indices[i+1]+1;
+	}
 
 	free(values);
 	free(positions);
 	free(positions_obj);
+	free(triangle_indices);
 	fclose(f);
 	fclose(obj);
 }
