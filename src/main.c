@@ -1,3 +1,4 @@
+#include <float.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -51,6 +52,19 @@ float v3_len(v3 a){
 	return sqrt(a.x * a.x + a.y * a.y + a.z * a.z);
 }
 
+float v3_dot(v3 a, v3 b) {
+	return a.x * b.x + a.y * b.y + a.z * b.z;
+}
+
+v3 v3_cross(v3 a, v3 b) {
+	v3 crossed;
+
+	crossed.x = a.y * b.z - a.z * b.y;
+	crossed.y = a.z * b.x - a.x * b.z;
+	crossed.z = a.x * b.y - a.y * b.x;
+
+	return crossed;
+}
 // i forgot which shadertoy this random number generator is from, sorry!
 //
 float fract(float n) {
@@ -146,20 +160,23 @@ int main() {
 	}*/
 
 
-	const int radius_resolution = 50;
+	const int radius_resolution = 75;
 	const int ray_resolution=75;
-	int layer_count = 30;
+	int layer_count = 20;
 	float layer_step = 1;
-	int cap_subdivisions = 11;
+	int cap_subdivisions = 30;
 	v3 *positions = malloc(radius_resolution * layer_count * sizeof(v3));
 	v3 *positions_obj = malloc((radius_resolution * layer_count + radius_resolution * layer_count * cap_subdivisions + radius_resolution) * 2 * sizeof(v3));
 	int *triangle_indices = malloc((radius_resolution * cap_subdivisions * layer_count * 2 * 2 + radius_resolution * 2) * 3 * sizeof(int));
 	int triangle_ind_id = 0;
 	const float step_size = 1.;
+	printf("Generating:\n");
 	for(int z = 0; z < layer_count; ++z) {
 #pragma omp parallel for
 	for(int i = 0; i < radius_resolution; ++i) {
+		if(i % 10 == 0) printf("\r%i%%", (int)ceil(100 * (float)(z*radius_resolution + i)/(layer_count * radius_resolution))), fflush(stdout);
 		float angle = ((float)i / radius_resolution) * 2 * M_PI;
+		float z_pos = (z - (double)layer_count/2) * layer_step;
 		v3 pos = (v3){0, 0, z * layer_step};
 		for(int step = 0; step < ray_resolution; ++step) {
 			pos = v3_add(pos, (v3){cos(angle) * step_size, sin(angle) * step_size, 0});
@@ -182,8 +199,12 @@ int main() {
 	int vert_id = 0;
 
 	for(int z = 0; z < layer_count; ++z) {
+
 		//fprintf(obj, "v %f %f %f\n", 0., 0., (float)z * layer_step);
-		positions_obj[vert_id] = (v3){0., 0., (float)z * layer_step};
+		float z_pos = (z - (double)layer_count/2) * layer_step;
+		float z_pos_n = ((z+1) - (double)layer_count/2) * layer_step;
+
+		positions_obj[vert_id] = (v3){0., 0., (float)z_pos};
 
 		vert_id++;
 		float scale_min = 1;
@@ -194,25 +215,27 @@ int main() {
 		for(int i = 0; i < radius_resolution; ++i) {
 			v3 pos = positions[i + radius_resolution * z];
 			//fprintf(obj, "v %f %f %f\n", pos.x * scale.x, pos.y * scale.y, (float)z*layer_step);
-			positions_obj[vert_id] = (v3){pos.x * scale.x, pos.y * scale.y, (float)z * layer_step};
+			positions_obj[vert_id] = (v3){pos.x * scale.x, pos.y * scale.y, z_pos};
 			vert_id++;
 			////fprintf(obj, "v %f %f %f\n", positions[i].x, positions[i].y, 1.);
 		}
 
 		//fprintf(obj, "v %f %f %f\n", 0., 0., (float)(z+1)*layer_step);
-		positions_obj[vert_id] = (v3){0., 0., (float)(z+1) * layer_step};
+		positions_obj[vert_id] = (v3){0., 0., z_pos_n};
 		vert_id++;
 		for(int i = 0; i < radius_resolution; ++i) {
 			v3 pos = positions[i + radius_resolution * z];
 			//fprintf(obj, "v %f %f %f\n", pos.x * scale.x, pos.y * scale.y, (float)(z+1)*layer_step);
-			positions_obj[vert_id] = (v3){pos.x * scale.x, pos.y * scale.y, (float)(z+1) * layer_step};
+			positions_obj[vert_id] = (v3){pos.x * scale.x, pos.y * scale.y, z_pos_n};
 			vert_id++;
 			////fprintf(obj, "v %f %f %f\n", positions[i].x, positions[i].y, 1.);
 		}
 	}
 	////fprintf(obj, "v %f %f %f\n", 0., 0., 1.);
 
+	printf("\nSubdividing:\n");
 	for(int z = 0; z < layer_count; ++z) {
+		printf("\r%i%%", (int)ceil((float)z/(layer_count-1) * 100)), fflush(stdout);
 		int layer = z * (radius_resolution+1) * 2;
 		int n_layer = layer + radius_resolution + 1;
 		////fprintf(obj, "f %i %i %i %i\n", vert2 + layer, vert1 + layer, vert_id - radius_resolution + i, vert_id - radius_resolution + i + 1);
@@ -239,6 +262,7 @@ int main() {
 		for(int subdivision = 1; subdivision <= cap_subdivisions; ++subdivision) {
 			float lerp_factor = (float)subdivision / (cap_subdivisions+1);
 			float lerp_factor_next = (float)(subdivision+1) / (cap_subdivisions+1);
+			lerp_factor = lerp_factor_next;
 
 			for(int i = 1; i <= radius_resolution; ++i) {
 				if(subdivision == 1) {
@@ -450,118 +474,87 @@ int main() {
 				}
 			}
 		}
-		//}
 	}
-	/*for(int z = 0; z < layer_count; ++z) {
-		for(int circle_index = 1; circle_index <= radius_resolution; ++circle_index) {
-			int layer = z * (radius_resolution+1) * 2;
-			int n_layer = layer + radius_resolution + 1;
+	
+	printf("\nEroding:\n");
+	int erosion_ray_count = 10000;
+	int eroded_count = 0;
+#pragma omp parallel for
+	for(int i = 0; i < erosion_ray_count; ++i) {
+		eroded_count++;
+		if(i % 10 == 0) printf("\r%i%%", (int)ceil(100 * (float)((float)eroded_count/(erosion_ray_count-1)))), fflush(stdout);
+		v3 origin;
+		v3 direction;
+		float random;
+		random = (double)(rand() - RAND_MAX/2) / RAND_MAX;
+		origin.x = 1/sqrt(2*M_PI) * exp(-(random/2));
+		random = (double)(rand() - RAND_MAX/2) / RAND_MAX;
+		origin.y = 1/sqrt(2*M_PI) * exp(-(random/2));
+		random = (double)(rand() - RAND_MAX/2) / RAND_MAX;
+		origin.z = 1/sqrt(2*M_PI) * exp(-(random/2));
 
-			int vert1 = circle_index + 1;
-			int vert2 = circle_index % radius_resolution + 2;
-			for(int i = 1; i <= cap_subdivisions; ++i) {
-				float lerp_factor = (float)i / (cap_subdivisions+1);
-				float lerp_factor_n = (float)(i+1) / (cap_subdivisions+1);
-				if(i == 1) {
-					v3 top_base = positions_obj[layer];
-					v3 top_stick = positions_obj[vert1 + layer - 1];
-					if(circle_index == 1) {
-						v3 top_new = v3_lerp(top_base, top_stick, lerp_factor_n);
-						//fprintf(obj, "v %f %f %f\n", top_new.x, top_new.y, top_new.z);
-						vert_id++;
-					}
+		origin = v3_fdiv(origin, v3_len(origin)); // normalize
+		origin = v3_fmul(origin, 3000);
 
-					v3 top_stick2 = positions_obj[vert2 + layer - 1];
-					v3 top_new2 = v3_lerp(top_base, top_stick2, lerp_factor_n);
-					//fprintf(obj, "v %f %f %f\n", top_new2.x, top_new2.y, top_new2.z);
-					vert_id++;
+		random = (double)(rand() - RAND_MAX/2) / RAND_MAX;
+		direction.x = 1/sqrt(2*M_PI) * exp(-(random/2));
+		random = (double)(rand() - RAND_MAX/2) / RAND_MAX;
+		direction.y = 1/sqrt(2*M_PI) * exp(-(random/2));
+		random = (double)(rand() - RAND_MAX/2) / RAND_MAX;
+		direction.z = 1/sqrt(2*M_PI) * exp(-(random/2));
 
+		origin = v3_fdiv(origin, v3_len(origin)); // normalize
+		origin = v3_fmul(origin, 100);
 
+		direction = v3_fdiv(direction, v3_len(direction)); // normalize
 
-					if(circle_index == 1) {
-						//fprintf(obj, "f %i %i %i\n", vert_id, vert_id-1, 1 + layer);
-						triangle_indices[triangle_ind_id++] = vert_id;
-						triangle_indices[triangle_ind_id++] = vert_id-1;
-						triangle_indices[triangle_ind_id++] = 1 + layer;
-					} else {
-						//fprintf(obj, "f %i %i %i\n", vert_id, vert_id-cap_subdivisions- 1, 1 + layer);
-						triangle_indices[triangle_ind_id++] = vert_id;
-						triangle_indices[triangle_ind_id++] = vert_id-cap_subdivisions- 1;
-						triangle_indices[triangle_ind_id++] = 1 + layer;
-					}
+		for(int i = 0; i < triangle_ind_id; i+=3) {
+			v3 vert_a = positions_obj[triangle_indices[i]-1];
+			v3 vert_b = positions_obj[triangle_indices[i+1]-1];
+			v3 vert_c = positions_obj[triangle_indices[i+2]-1];
 
-					////fprintf(obj, "f %i %i %i\n", vert_id-3, vert_id-2, vert1+layer);
-					////fprintf(obj, "f %i %i %i\n", vert_id-2, vert2+layer, vert1+layer);
-				} else if(i == cap_subdivisions) {
-					////fprintf(obj, "f %i %i %i\n", vert_id-1, vert_id, vert1+layer);
-					////fprintf(obj, "f %i %i %i\n", vert_id, vert2+layer, vert1+layer);
-				} else{
-					v3 top_base = positions_obj[layer];
-					v3 top_stick = positions_obj[vert1 + layer - 1];
+			float epsilon = FLT_EPSILON;
 
-					v3 top_stick2 = positions_obj[vert2 + layer - 1];
+			v3 edge1 = v3_sub(vert_b, vert_a);
+			v3 edge2 = v3_sub(vert_c, vert_a);
 
+			v3 ray_cross_e2 = v3_cross(direction, edge2);
+			float det = v3_dot(edge1, ray_cross_e2);
+			if(fabs(det) < epsilon) continue;
 
-					v3 top_next_new2 = v3_lerp(top_base, top_stick2, lerp_factor_n);
-					//fprintf(obj, "v %f %f %f\n", top_next_new2.x, top_next_new2.y, top_next_new2.z);
-					vert_id++;
+			float inv_det = 1/det;
 
-					//fprintf(obj, "f %i %i %i\n", vert_id-cap_subdivisions-3, vert_id-2, vert_id-cap_subdivisions-1);
-					triangle_indices[triangle_ind_id++] = vert_id-cap_subdivisions-3;
-					triangle_indices[triangle_ind_id++] = vert_id-2;
-					triangle_indices[triangle_ind_id++] = vert_id-cap_subdivisions-1;
-					//fprintf(obj, "f %i %i %i\n", vert_id-2, vert_id, vert_id-cap_subdivisions-1);
-					triangle_indices[triangle_ind_id++] = vert_id-2;
-					triangle_indices[triangle_ind_id++] = vert_id;
-					triangle_indices[triangle_ind_id++] = vert_id-cap_subdivisions-1;
+			v3 s = v3_sub(origin, vert_a);
+			float u = inv_det * v3_dot(s, ray_cross_e2);
 
-				}
-			}
+			if(u < epsilon || u - 1 > epsilon) continue;
 
-			// bottom cap
-			v3 bottom_base = positions_obj[n_layer];
-			v3 bottom_stick = positions_obj[vert1 + n_layer - 1];
-			v3 bottom_new = v3_fdiv(v3_add(bottom_base, bottom_stick), 2);
-			//fprintf(obj, "v %f %f %f\n", bottom_new.x, bottom_new.y, bottom_new.z);
-			vert_id++;
+			v3 s_cross_e1 = v3_cross(s, edge1);
+			float v = inv_det * v3_dot(direction, s_cross_e1);
 
-			v3 bottom_stick2 = positions_obj[vert2 + n_layer - 1];
-			v3 bottom_new2 = v3_fdiv(v3_add(bottom_base, bottom_stick2), 2);
-			//fprintf(obj, "v %f %f %f\n", bottom_new2.x, bottom_new2.y, bottom_new2.z);
-			vert_id++;
+			if(v < epsilon || u + v - 1 > epsilon) continue;
 
-			//fprintf(obj, "f %i %i %i\n", 1 + n_layer, vert_id-1, vert_id);
-			triangle_indices[triangle_ind_id++] = 1 + n_layer;
-			triangle_indices[triangle_ind_id++] = vert_id-1;
-			triangle_indices[triangle_ind_id++] = vert_id;
+			//float t = inv_det * v3_dot(edge2, s_cross_e1);
+			
+			float w = (1 - u - v);
 
-			//fprintf(obj, "f %i %i %i\n", vert1+n_layer, vert_id, vert_id-1);
-			triangle_indices[triangle_ind_id++] = vert1+n_layer;
-			triangle_indices[triangle_ind_id++] = vert_id;
-			triangle_indices[triangle_ind_id++] = vert_id-1;
-			//fprintf(obj, "f %i %i %i\n", vert1+n_layer, vert2+n_layer, vert_id);
-			triangle_indices[triangle_ind_id++] = vert1+n_layer;
-			triangle_indices[triangle_ind_id++] = vert2+n_layer;
-			triangle_indices[triangle_ind_id++] = vert_id;
+			v3 *vert_a_p = &positions_obj[triangle_indices[i]-1];
+			v3 *vert_b_p = &positions_obj[triangle_indices[i+1]-1];
+			v3 *vert_c_p = &positions_obj[triangle_indices[i+2]-1];
 
-			// walls
-			//fprintf(obj, "f %i %i %i \n", vert1 + layer, vert2 + layer, vert2 + n_layer); 
-			triangle_indices[triangle_ind_id++] = vert1 + layer;
-			triangle_indices[triangle_ind_id++] = vert2 + layer;
-			triangle_indices[triangle_ind_id++] = vert2 + n_layer;
-			//fprintf(obj, "f %i %i %i \n", vert1 + layer, vert2 + n_layer, vert1 + n_layer); 
-			triangle_indices[triangle_ind_id++] = vert1 + layer;
-			triangle_indices[triangle_ind_id++] = vert2 + n_layer;
-			triangle_indices[triangle_ind_id++] = vert1 + n_layer;
+			*vert_a_p = v3_add(*vert_a_p, v3_fmul(direction, w * 0.1));
+			*vert_b_p = v3_add(*vert_b_p, v3_fmul(direction, u * 0.1));
+			*vert_c_p = v3_add(*vert_c_p, v3_fmul(direction, v * 0.1));
 		}
-	}*/
+	}
+
+
 	for(int i = 0; i < vert_id; ++i) {
 		v3 current_vertex = positions_obj[i];
 		fprintf(obj, "v %f %f %f\n", current_vertex.x, current_vertex.y, current_vertex.z);
 	}
 	for(int i = 0; i < triangle_ind_id; i+=3) {
 		fprintf(obj, "f %i %i %i\n", triangle_indices[i], triangle_indices[i+1], triangle_indices[i+2]);
-		//triangle_indices[triangle_ind_id++] = triangle_indices[i+1]+1;
 	}
 
 	free(values);
