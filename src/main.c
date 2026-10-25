@@ -477,7 +477,7 @@ int main() {
 	}
 	
 	printf("\nEroding:\n");
-	int erosion_ray_count = 10000;
+	int erosion_ray_count = 50000;
 	int eroded_count = 0;
 #pragma omp parallel for
 	for(int i = 0; i < erosion_ray_count; ++i) {
@@ -486,28 +486,35 @@ int main() {
 		v3 origin;
 		v3 direction;
 		float random;
-		random = (double)(rand() - RAND_MAX/2) / RAND_MAX;
-		origin.x = 1/sqrt(2*M_PI) * exp(-(random/2));
-		random = (double)(rand() - RAND_MAX/2) / RAND_MAX;
-		origin.y = 1/sqrt(2*M_PI) * exp(-(random/2));
-		random = (double)(rand() - RAND_MAX/2) / RAND_MAX;
-		origin.z = 1/sqrt(2*M_PI) * exp(-(random/2));
+		
+		random = sqrt(-2 * log(((double)rand() / RAND_MAX))) * cos(2 * M_PI * ((double)rand() / RAND_MAX));
+		origin.x = random;
+		random = sqrt(-2 * log(((double)rand() / RAND_MAX))) * cos(2 * M_PI * ((double)rand() / RAND_MAX));
+		origin.y = random;
+		random = random;
+		origin.z = 1/sqrt(2*M_PI) * exp(-(random/2)) - 0.5;
+		//printf("origin: %f %f %f\n", origin.x, origin.y, origin.z);
 
 		origin = v3_fdiv(origin, v3_len(origin)); // normalize
 		origin = v3_fmul(origin, 3000);
 
-		random = (double)(rand() - RAND_MAX/2) / RAND_MAX;
-		direction.x = 1/sqrt(2*M_PI) * exp(-(random/2));
-		random = (double)(rand() - RAND_MAX/2) / RAND_MAX;
-		direction.y = 1/sqrt(2*M_PI) * exp(-(random/2));
-		random = (double)(rand() - RAND_MAX/2) / RAND_MAX;
-		direction.z = 1/sqrt(2*M_PI) * exp(-(random/2));
+		random = sqrt(-2 * log(((double)rand() / RAND_MAX))) * cos(2 * M_PI * ((double)rand() / RAND_MAX));
+		direction.x = random;
+		random = sqrt(-2 * log(((double)rand() / RAND_MAX))) * cos(2 * M_PI * ((double)rand() / RAND_MAX));
+		direction.y = random;
+		random = sqrt(-2 * log(((double)rand() / RAND_MAX))) * cos(2 * M_PI * ((double)rand() / RAND_MAX));
+		direction.z = random;
 
 		origin = v3_fdiv(origin, v3_len(origin)); // normalize
-		origin = v3_fmul(origin, 100);
+		origin = v3_fmul(origin, 30);
 
 		direction = v3_fdiv(direction, v3_len(direction)); // normalize
 
+		float closest = INFINITY;
+		v3 *vert_a_p = NULL;
+		v3 *vert_b_p = NULL;
+		v3 *vert_c_p = NULL;
+		float v_u,v_v,v_w;
 		for(int i = 0; i < triangle_ind_id; i+=3) {
 			v3 vert_a = positions_obj[triangle_indices[i]-1];
 			v3 vert_b = positions_obj[triangle_indices[i+1]-1];
@@ -534,17 +541,28 @@ int main() {
 
 			if(v < epsilon || u + v - 1 > epsilon) continue;
 
-			//float t = inv_det * v3_dot(edge2, s_cross_e1);
+			float t = inv_det * v3_dot(edge2, s_cross_e1);
+			if(t < closest) {
+				closest = t;
+				float w = (1 - u - v);
+
+				vert_a_p = &positions_obj[triangle_indices[i]-1];
+				vert_b_p = &positions_obj[triangle_indices[i+1]-1];
+				vert_c_p = &positions_obj[triangle_indices[i+2]-1];
+				v_w = w;
+				v_v = v;
+				v_u = u;
+
+				/**vert_a_p = v3_add(*vert_a_p, v3_fmul(direction, w * 0.1));
+				*vert_b_p = v3_add(*vert_b_p, v3_fmul(direction, u * 0.1));
+				*vert_c_p = v3_add(*vert_c_p, v3_fmul(direction, v * 0.1));*/
+			}
 			
-			float w = (1 - u - v);
-
-			v3 *vert_a_p = &positions_obj[triangle_indices[i]-1];
-			v3 *vert_b_p = &positions_obj[triangle_indices[i+1]-1];
-			v3 *vert_c_p = &positions_obj[triangle_indices[i+2]-1];
-
-			*vert_a_p = v3_add(*vert_a_p, v3_fmul(direction, w * 0.1));
-			*vert_b_p = v3_add(*vert_b_p, v3_fmul(direction, u * 0.1));
-			*vert_c_p = v3_add(*vert_c_p, v3_fmul(direction, v * 0.1));
+		}
+		if(closest != INFINITY) {
+			*vert_a_p = v3_add(*vert_a_p, v3_fmul(direction, v_w * 0.3));
+			*vert_b_p = v3_add(*vert_b_p, v3_fmul(direction, v_u * 0.3));
+			*vert_c_p = v3_add(*vert_c_p, v3_fmul(direction, v_v * 0.3));
 		}
 	}
 
