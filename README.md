@@ -7,7 +7,7 @@
 ![front view](frontview.png)
 
 ## Trying it out
-Try it out (here)[https://duckdood.github.io/terra/pancakes/]
+Try it out [here](https://duckdood.github.io/terra/pancakes/)
 
 ## Building locally (Tested on linux with GCC)
 ```
