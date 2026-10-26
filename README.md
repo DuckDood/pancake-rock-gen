@@ -16,3 +16,6 @@ cd pancake-rock-gen
 make
 ```
 This puts a program in build/ that will generate rocks and put it in an OBJ file named layer.obj
+
+## Technical info
+This is a rock generator inspired by rock formations I've seen in the Mountain West of the United States. It uses noise scaled based on distance from the center column, which is then thresholded and blurred a couple of times to create the layers, then bombards them with thousands of rays to simulate erosion on the surface.
