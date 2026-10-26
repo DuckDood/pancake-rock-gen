@@ -141,9 +141,9 @@ float get_blurred_thresholded_at_coord(v3 p, v3 res, int radius1, float threshol
 
 int main() {
 	const int resolution = 100;
-	FILE *f = fopen("rand.ppm", "w");
+	//FILE *f = fopen("rand.ppm", "w");
 	FILE *obj = fopen("layer.obj", "w");
-	fprintf(f, "P6 %i %i 255\n", resolution, resolution);
+	//fprintf(f, "P6 %i %i 255\n", resolution, resolution);
 	v3 res = {resolution,resolution,resolution};
 	v3 halfres = {resolution / 2., resolution / 2., 0.};
 	_Bool *values = calloc(resolution*resolution,sizeof(_Bool));
@@ -191,11 +191,11 @@ int main() {
 		values[(int)(pos.y + res.y/2) * (int)res.x + (int)(pos.x + res.x/2)] = 1;
 	}
 	}
-	for(int i = 0; i < resolution*resolution; ++i) {
+	/*for(int i = 0; i < resolution*resolution; ++i) {
 		fprintf(f, "%c", (int)values[i] * 255);
 		fprintf(f, "%c", (int)values[i] * 255);
 		fprintf(f, "%c", (int)values[i] * 255);
-	}
+	}*/
 	int vert_id = 0;
 
 	for(int z = 0; z < layer_count; ++z) {
@@ -579,6 +579,6 @@ int main() {
 	free(positions);
 	free(positions_obj);
 	free(triangle_indices);
-	fclose(f);
+	//fclose(f);
 	fclose(obj);
 }
