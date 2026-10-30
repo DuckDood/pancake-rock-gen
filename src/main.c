@@ -2,6 +2,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 
 typedef struct {
 	float x,y;
@@ -80,12 +81,12 @@ float noise2( v2 p )
 {
 	return hash( p.x + p.y * 57.1235);
 }
-float noise3( v3 p )
+float noise3( v3 p , float seed)
 {
-	return hash( p.x + p.y * 57.1235 + p.z * 502.352); // just guessing for the second scalar
+	return hash( p.x + p.y * 57.1235 + p.z * 502.352 + seed * 1.532); // just guessing for the second scalar
 }
 
-float get_blurred_at_coord(v3 p, v3 res, int radius) {
+float get_blurred_at_coord(v3 p, v3 res, int radius, float seed) {
 	float blurred_count = 0;
 	float blur_value = 0;
 	for(int z = -radius; z <= radius; ++z) {
@@ -98,7 +99,10 @@ float get_blurred_at_coord(v3 p, v3 res, int radius) {
 				v3 uv = v3_div(v3_add(p_floor, offset), res);
 				//if(uv.x < 0 || uv.y < 0 || uv.x > 1 || uv.y > 1) continue;
 				++blurred_count;
-				blur_value += noise3(uv);
+				//uv.x += seed * 10;
+				//uv.y += seed * 10;
+				//uv.z += seed * 10;
+				blur_value += noise3(uv, seed);
 			}
 		}
 	}
@@ -110,12 +114,12 @@ float get_blurred_at_coord(v3 p, v3 res, int radius) {
 	return (blur_value / blurred_count) * noise_scalar;
 }
 
-float get_thresholded_at_coord(v3 p, v3 res, int radius, float threshold) {
-	return get_blurred_at_coord(p, res, radius) > threshold;
+float get_thresholded_at_coord(v3 p, v3 res, int radius, float threshold, float seed) {
+	return get_blurred_at_coord(p, res, radius, seed) > threshold;
 	//return 1;
 }
 
-float get_blurred_thresholded_at_coord(v3 p, v3 res, int radius1, float threshold1, int radius2, float threshold2) {
+float get_blurred_thresholded_at_coord(v3 p, v3 res, int radius1, float threshold1, int radius2, float threshold2, float seed) {
 	float blurred_count = 0;
 	float blur_value = 0;
 	for(int z = -radius2; z <= radius2; ++z) {
@@ -130,7 +134,7 @@ float get_blurred_thresholded_at_coord(v3 p, v3 res, int radius1, float threshol
 				//if(uv.x < 0 || uv.y < 0 || uv.x > res.x || uv.y > res.y) continue;
 				++blurred_count;
 				//blur_value += get_biased_at_coord(uv);
-				blur_value += get_thresholded_at_coord(uv, res, radius1, threshold1);
+				blur_value += get_thresholded_at_coord(uv, res, radius1, threshold1, seed);
 
 			}
 		}
@@ -170,6 +174,10 @@ int main() {
 	int *triangle_indices = malloc((radius_resolution * cap_subdivisions * layer_count * 2 * 2 + radius_resolution * 2) * 3 * sizeof(int));
 	int triangle_ind_id = 0;
 	const float step_size = 1.;
+	//const float seed = time(NULL);
+	srand(time(NULL));
+	const float seed = (double)rand()/RAND_MAX;
+	//const float seed = 3;
 	printf("Generating:\n");
 	for(int z = 0; z < layer_count; ++z) {
 #pragma omp parallel for
@@ -180,7 +188,7 @@ int main() {
 		v3 pos = (v3){0, 0, z * layer_step};
 		for(int step = 0; step < ray_resolution; ++step) {
 			pos = v3_add(pos, (v3){cos(angle) * step_size, sin(angle) * step_size, 0});
-			if(get_blurred_thresholded_at_coord(pos, res, 3, 0.35, 2, 0.35) > 0.5) {
+			if(get_blurred_thresholded_at_coord(pos, res, 3, 0.35, 2, 0.35, seed) > 0.5) {
 				break;
 			}
 		} 
@@ -209,7 +217,7 @@ int main() {
 		vert_id++;
 		float scale_min = 1;
 		float scale_drop = 2; 
-		v2 scale = (v2){(1-pow(hash(z * layer_count * 32), scale_drop) + scale_min)/(scale_min+1), (1-pow(hash(z * layer_count * 2409), scale_drop) + scale_min)/(scale_min+1)};
+		v2 scale = (v2){(1-pow(hash(z * layer_count * 32 + seed + 42), scale_drop) + scale_min)/(scale_min+1), (1-pow(hash(z * layer_count * 2409), scale_drop + seed * 238) + scale_min)/(scale_min+1)};
 		//v2 scale = (v2){1, 1};
 
 		for(int i = 0; i < radius_resolution; ++i) {

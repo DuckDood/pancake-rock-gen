@@ -2,15 +2,18 @@ dir obj
 dir build
 
 
-compiler gcc
+compiler ${CC}
+linker ${CC}
 
 srcflag -O3
 
 srcflag -fopenmp
 buildflag -fopenmp
 
-srcflag -fsanitize=address -g3
-buildflag -fsanitize=address -g3
+srcflag -g3
+buildflag -g3
+
+buildflag -lm
 
 src main.c
 

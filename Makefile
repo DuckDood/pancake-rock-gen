@@ -17,17 +17,17 @@ endif
 
 obj/main.c.o: src/main.c 
 ifeq (${OSMODE}, l)
-	gcc src/main.c -c -o obj/main.c.o -O3 -fopenmp -fsanitize=address -g3
+	${CC} src/main.c -c -o obj/main.c.o -O3 -fopenmp -g3
 else
-	gcc src/main.c -c -o obj/main.c.o -O3 -fopenmp -fsanitize=address -g3
+	${CC} src/main.c -c -o obj/main.c.o -O3 -fopenmp -g3
 endif
 
 
 build/rock_gen: obj/main.c.o 
 ifeq (${OSMODE}, l)
-	${CXX} obj/main.c.o -o build/rock_gen -fopenmp -fsanitize=address -g3
+	${CC} obj/main.c.o -o build/rock_gen -fopenmp -g3 -lm
 else
-	${CXX} obj/main.c.o -o build/rock_gen -fopenmp -fsanitize=address -g3
+	${CC} obj/main.c.o -o build/rock_gen -fopenmp -g3 -lm
 endif
 
 
@@ -40,9 +40,9 @@ clean:
 gencommands:
 	mkdir emmgtemp
 ifeq (${OSMODE}, l)
-	clang src/main.c  -O3 -fopenmp -fsanitize=address -g3 -MJ emmgtemp/0.json -fsyntax-only
+	clang src/main.c  -O3 -fopenmp -g3 -MJ emmgtemp/0.json -fsyntax-only
 else
-	clang src/main.c  -O3 -fopenmp -fsanitize=address -g3 -MJ emmgtemp/0.json -fsyntax-only
+	clang src/main.c  -O3 -fopenmp -g3 -MJ emmgtemp/0.json -fsyntax-only
 endif
 # not cross platform here sad i think
 	echo [ > emmgtemp/[
